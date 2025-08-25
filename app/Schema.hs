@@ -2,18 +2,47 @@
 
 module Schema where
 
+import Data.Aeson
+import qualified Data.ByteString.Lazy as B
+import Data.Text (Text)
+import qualified Data.Text as T
 import Database.SQLite.Simple
+
+data BMSRecord = BMSRecord
+  { artist :: Text
+  , level :: Text
+  , title :: Text
+  , url :: Maybe Text
+  , url_diff :: Maybe Text
+  , comment :: Maybe Text
+  , md5 :: Maybe Text
+  , sha256 :: Maybe Text
+  }
+  deriving (Show)
+
+instance FromJSON BMSRecord where
+  parseJSON = withObject "BMSRecord" $ \v ->
+    BMSRecord
+      <$> v .: "artist"
+      <*> v .: "level"
+      <*> v .: "title"
+      <*> v .:? "url"
+      <*> v .:? "url_diff"
+      <*> v .:? "comment"
+      <*> v .:? "md5"
+      <*> v .:? "sha256"
 
 createTables :: Connection -> IO ()
 createTables conn = do
-  -- Songs represent logical groupings (one song may have multiple charts)
-  execute_ conn "CREATE TABLE IF NOT EXISTS songs (id INTEGER PRIMARY KEY, title TEXT NOT NULL, artist TEXT NOT NULL, genre TEXT, UNIQUE(title, artist))"
-
-  -- Folders containing one or more BMS files for a song
-  execute_ conn "CREATE TABLE IF NOT EXISTS folders (id INTEGER PRIMARY KEY, path TEXT UNIQUE NOT NULL, song_id INTEGER NOT NULL, custom_name TEXT,           FOREIGN KEY(song_id) REFERENCES songs(id))"
-
-  -- Individual BMS files
-  execute_ conn "CREATE TABLE IF NOT EXISTS bms_files (id INTEGER PRIMARY KEY, filename TEXT NOT NULL, folder_id INTEGER NOT NULL, sha256 TEXT UNIQUE, md5 TEXT UNIQUE, play_length INTEGER, FOREIGN KEY(folder_id) REFERENCES folders(id))"
-
   -- Difficulty information from tables
-  execute_ conn "CREATE TABLE IF NOT EXISTS difficulty_info ( id INTEGER PRIMARY KEY, song_id INTEGER NOT NULL, source_table TEXT NOT NULL, level TEXT, difficulty INTEGER, FOREIGN KEY(song_id) REFERENCES songs(id), UNIQUE(song_id, source_table))"
+  execute_ conn "CREATE TABLE IF NOT EXISTS bms_records (id INTEGER PRIMARY KEY AUTOINCREMENT, source_table TEXT NOT NULL, artist TEXT, title TEXT, level TEXT, url TEXT, url_diff TEXT, comment TEXT, md5 TEXT, sha256 TEXT, UNIQUE(title, md5, sha256, source_table))"
+
+insertRecord :: Connection -> String -> BMSRecord -> IO ()
+insertRecord conn sourceTable record =
+  execute
+    conn
+    "INSERT INTO bms_records (source_table, artist, level, title, url, url_diff, comment, md5, sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    (sourceTable, artist record, level record, title record, url record, url_diff record, comment record, md5 record, sha256 record)
+
+insertRecords :: Connection -> FilePath -> [BMSRecord] -> IO ()
+insertRecords conn filePath = mapM_ (insertRecord conn (drop 7 $ takeWhile (/= '.') filePath))

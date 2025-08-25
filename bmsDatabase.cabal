@@ -53,9 +53,12 @@ executable bmsDatabase
   -- other-extensions:
   -- Other library packages from which modules are imported.
   build-depends:
+    aeson,
     base ^>=4.19.2.0,
+    bytestring,
     sqlite-simple,
     text,
+
   -- Directories containing source files.
   hs-source-dirs: app
   -- Base language which the package is written in.
