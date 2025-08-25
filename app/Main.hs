@@ -7,6 +7,7 @@ import qualified Data.ByteString.Lazy as B
 import Data.Text (Text)
 import qualified Data.Text as T
 import Database.SQLite.Simple
+import FetchTable (getTables)
 import Schema
 
 readBMSRecords :: FilePath -> IO (Either String [BMSRecord])
@@ -33,5 +34,13 @@ processJsonFiles filePaths = do
 
 main :: IO ()
 main = do
-  let jsonFiles = ["tables/bms_second_normal.json", "tables/satellite.json"] -- Replace with your JSON file names
-  processJsonFiles jsonFiles
+  arg <- getLine
+  case arg of
+    "Tables" -> do
+      putStrLn "Fetching Tables"
+      getTables 
+    "Database" -> do
+      let jsonFiles = ["tables/bms_second_normal.json", "tables/satellite.json"] -- Replace with your JSON file names
+      processJsonFiles jsonFiles
+    _ -> return ()
+  main
