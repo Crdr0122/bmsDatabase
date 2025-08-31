@@ -20,6 +20,14 @@ data BMSRecord = BMSRecord
   }
   deriving (Show)
 
+data BMSFile = BMSFile
+  { fArtist :: Text
+  , fTitle :: Text
+  , fMd5 :: Text
+  , fSha256 :: Text
+  , filePath :: Text
+  }
+
 instance FromJSON BMSRecord where
   parseJSON = withObject "BMSRecord" $ \v ->
     BMSRecord
@@ -43,6 +51,3 @@ insertRecord conn sourceTable record =
     conn
     "INSERT INTO bms_records (source_table, artist, level, title, url, url_diff, comment, md5, sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     (sourceTable, artist record, level record, title record, url record, url_diff record, comment record, md5 record, sha256 record)
-
-insertRecords :: Connection -> FilePath -> [BMSRecord] -> IO ()
-insertRecords conn filePath = mapM_ (insertRecord conn (drop 7 $ takeWhile (/= '.') filePath))

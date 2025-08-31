@@ -10,9 +10,12 @@ difficultyTables :: [(FilePath, Request)]
 difficultyTables =
   [ ("Satellite", "https://stellabms.xyz/sl/score.json")
   , ("Solar", "https://stellabms.xyz/so/score.json")
-  , ("Stella", "https://stellabms.xyz/st/score.json")
   , ("New_Generation_Normal", "https://rattoto10.github.io/second_table/score.json")
   , ("New_Generation_Insane", "https://rattoto10.github.io/second_table/insane_data.json")
+  , ("Starlight", "https://djkuroakari.github.io/data.json")
+  , ("Normal", "https://darksabun.github.io/table/archive/normal1/data.json")
+  , ("Insane", "https://darksabun.github.io/table/archive/insane1/data.json")
+  , ("Scramble", "https://script.google.com/macros/s/AKfycbw5pnMwlCFZz7wDY5kRsBpfSm0-luKszs8LQAEE6BKkVT1R78-CpB4WA9chW-gdBsF7IA/exec")
   ]
 
 getTables :: IO ()
@@ -25,6 +28,6 @@ getTable (n, url) = do
   putStrLn $
     "The status code for "
       ++ n
-      ++ " was: "
+      ++ " is: "
       ++ show (getResponseStatusCode response)
   L8.writeFile ("tables/" <> n <> ".json") $ getResponseBody response

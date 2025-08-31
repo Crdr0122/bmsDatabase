@@ -51,6 +51,7 @@ executable bmsDatabase
   other-modules:
     FetchTable
     Schema
+    BMSFile
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
