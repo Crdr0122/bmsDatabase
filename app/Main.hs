@@ -11,6 +11,7 @@ import qualified Data.Text as T
 import Database.SQLite.Simple
 import FetchTable (difficultyTables, getTables)
 import Schema
+import BMSFile (processBMS)
 
 readBMSRecords :: FilePath -> IO (Either String [BMSRecord])
 readBMSRecords filePath = do
@@ -40,6 +41,9 @@ main :: IO ()
 main = do
   arg <- getLine
   case arg of
+    "t" -> do
+      b <- processBMS "t.bms"
+      print b 
     "Tables" -> do
       putStrLn "Fetching Tables"
       getTables

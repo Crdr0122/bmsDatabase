@@ -3,9 +3,8 @@
 module Schema where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString as BS
 import Data.Text (Text)
-import qualified Data.Text as T
 import Database.SQLite.Simple
 
 data BMSRecord = BMSRecord
@@ -23,10 +22,11 @@ data BMSRecord = BMSRecord
 data BMSFile = BMSFile
   { fArtist :: Text
   , fTitle :: Text
-  , fMd5 :: Text
-  , fSha256 :: Text
+  , fMd5 :: Maybe Text
+  , fSha256 :: Maybe BS.ByteString
   , filePath :: Text
   }
+  deriving (Show)
 
 instance FromJSON BMSRecord where
   parseJSON = withObject "BMSRecord" $ \v ->

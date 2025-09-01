@@ -49,9 +49,9 @@ executable bmsDatabase
   main-is: Main.hs
   -- Modules included in this executable, other than Main.
   other-modules:
+    BMSFile
     FetchTable
     Schema
-    BMSFile
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
@@ -59,11 +59,15 @@ executable bmsDatabase
   build-depends:
     aeson,
     base ^>=4.19.2.0,
+    base16-bytestring,
     bytestring,
+    containers,
+    cryptohash-md5,
+    cryptohash-sha256,
+    http-conduit,
     sqlite-simple,
     text,
-    http-conduit,
-    containers
+    text-icu,
 
   -- Directories containing source files.
   hs-source-dirs: app
