@@ -3,6 +3,7 @@
 
 module Main where
 
+import BMSFile (processBMS,processBMSON)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as B
 import Data.List
@@ -11,19 +12,18 @@ import qualified Data.Text as T
 import Database.SQLite.Simple
 import FetchTable (difficultyTables, getTables)
 import Schema
-import BMSFile (processBMS)
 
 readBMSRecords :: FilePath -> IO (Either String [BMSRecord])
-readBMSRecords filePath = do
-  jsonData <- B.readFile filePath
+readBMSRecords f = do
+  jsonData <- B.readFile f
   return $ eitherDecode jsonData
 
 processJsonFile :: Connection -> FilePath -> IO ()
-processJsonFile conn filePath = do
-  result <- readBMSRecords filePath
-  let tableName = drop 7 $ takeWhile (/= '.') filePath
+processJsonFile conn f = do
+  result <- readBMSRecords f
+  let tableName = drop 7 $ takeWhile (/= '.') f
   case result of
-    Left err -> putStrLn $ "Error parsing JSON file " ++ filePath ++ ": " ++ err
+    Left err -> putStrLn $ "Error parsing JSON file " ++ f ++ ": " ++ err
     Right records -> do
       mapM_ (insertRecord conn tableName) records
       putStrLn $ "Inserted " ++ show (length records) ++ " records from " ++ tableName
@@ -41,15 +41,17 @@ main :: IO ()
 main = do
   arg <- getLine
   case arg of
-    "t" -> do
+    "r" -> do
       b <- processBMS "t.bms"
-      print b 
-    "Tables" -> do
+      bon <- processBMSON "t.bmson"
+      print b
+      print bon
+    "t" -> do
       putStrLn "Fetching Tables"
       getTables
-    "Database" -> do
+    "d" -> do
       let jsonFiles = (<> ".json") . ("tables/" <>) . fst <$> difficultyTables -- Replace with your JSON file names
       processJsonFiles jsonFiles
-    (stripPrefix "Database" -> Just tableName) -> do return ()
+    (stripPrefix "d" -> Just tableName) -> do return ()
     _ -> return ()
   main
