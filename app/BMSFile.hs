@@ -14,7 +14,7 @@ import Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text.ICU.Convert as ICU
 import Schema (BMSFile (..))
 
-getAllBMSFiles :: FilePath -> IO [BMSFile]
+-- getAllBMSFiles :: FilePath -> IO [BMSFile]
 processBMS :: FilePath -> IO BMSFile
 processBMS file = do
   bytestring <- B.readFile file

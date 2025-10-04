@@ -27,7 +27,6 @@ data BMSFile = BMSFile
   }
   deriving (Show)
 
-
 instance FromJSON BMSRecord where
   parseJSON = withObject "BMSRecord" $ \v ->
     BMSRecord
@@ -40,10 +39,14 @@ instance FromJSON BMSRecord where
       <*> v .:? "md5"
       <*> v .:? "sha256"
 
-createTables :: Connection -> IO ()
-createTables conn = do
+createRecordTable :: Connection -> IO ()
+createRecordTable conn = do
   -- Difficulty information from tables
   execute_ conn "CREATE TABLE IF NOT EXISTS bms_records (id INTEGER PRIMARY KEY AUTOINCREMENT, source_table TEXT NOT NULL, artist TEXT, title TEXT, level TEXT, url TEXT, url_diff TEXT, comment TEXT, md5 TEXT, sha256 TEXT, UNIQUE(title, md5, sha256, source_table))"
+
+createFileTable :: Connection -> IO ()
+createFileTable conn = 
+  execute_ conn "CREATE TABLE IF NOT EXISTS bms_files (id INTEGER PRIMARY KEY AUTOINCREMENT, artist TEXT, title TEXT, file_path TEXT NOT NULL, md5 TEXT, sha256 TEXT, UNIQUE(file_path))"
 
 insertRecord :: Connection -> String -> BMSRecord -> IO ()
 insertRecord conn sourceTable record =
@@ -51,3 +54,10 @@ insertRecord conn sourceTable record =
     conn
     "INSERT INTO bms_records (source_table, artist, level, title, url, url_diff, comment, md5, sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     (sourceTable, artist record, level record, title record, url record, url_diff record, comment record, md5 record, sha256 record)
+
+insertBMSFile :: Connection -> String -> BMSFile -> IO ()
+insertBMSFile conn fp f =
+  execute
+    conn
+    "INSERT INTO bms_files (file_path, md5, sha256) VALUES (?,?,?)"
+    (fp, fMd5 f, fSha256 f)

@@ -64,6 +64,8 @@ executable bmsDatabase
     containers,
     cryptohash-md5,
     cryptohash-sha256,
+    directory,
+    filepath,
     http-conduit,
     sqlite-simple,
     text,
