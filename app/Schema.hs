@@ -3,8 +3,11 @@
 module Schema where
 
 import Data.Aeson
-import Data.Text (Text)
+import Data.Text (Text, commonPrefixes)
 import Database.SQLite.Simple
+
+validExts :: [String]
+validExts = [".bms", ".bme", ".bmson", ".bml", ".pms", ".BME", ".BMS", ".BML", ".BMSON", ".PMS"]
 
 data BMSRecord = BMSRecord
   { artist :: Text
@@ -45,7 +48,7 @@ createRecordTable conn = do
   execute_ conn "CREATE TABLE IF NOT EXISTS bms_records (id INTEGER PRIMARY KEY AUTOINCREMENT, source_table TEXT NOT NULL, artist TEXT, title TEXT, level TEXT, url TEXT, url_diff TEXT, comment TEXT, md5 TEXT, sha256 TEXT, UNIQUE(title, md5, sha256, source_table))"
 
 createFileTable :: Connection -> IO ()
-createFileTable conn = 
+createFileTable conn =
   execute_ conn "CREATE TABLE IF NOT EXISTS bms_files (id INTEGER PRIMARY KEY AUTOINCREMENT, artist TEXT, title TEXT, file_path TEXT NOT NULL, md5 TEXT, sha256 TEXT, UNIQUE(file_path))"
 
 insertRecord :: Connection -> String -> BMSRecord -> IO ()
@@ -59,5 +62,12 @@ insertBMSFile :: Connection -> String -> BMSFile -> IO ()
 insertBMSFile conn fp f =
   execute
     conn
-    "INSERT INTO bms_files (file_path, md5, sha256) VALUES (?,?,?)"
-    (fp, fMd5 f, fSha256 f)
+    "INSERT INTO bms_files (file_path, artist, title, md5, sha256) VALUES (?,?,?,?,?)"
+    (fp, fArtist f, fTitle f, fMd5 f, fSha256 f)
+
+commonPrefix :: [Text] -> Text
+commonPrefix = foldl1 pre
+ where
+  pre x y = case commonPrefixes x y of
+    Nothing -> ""
+    Just (p, _, _) -> p

@@ -1,0 +1,1 @@
+SELECT * FROM bms_records WHERE NOT EXISTS (SELECT 1 FROM bms_files WHERE bms_records.md5 = bms_files.md5 OR bms_records.sha256 = bms_files.sha256)

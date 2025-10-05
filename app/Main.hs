@@ -13,7 +13,7 @@ import qualified Data.Text as T
 import Database.SQLite.Simple
 import FetchTable (difficultyTables, getTables)
 import Schema
-import System.Directory (doesDirectoryExist, doesFileExist, listDirectory)
+import System.Directory (doesDirectoryExist, doesFileExist, listDirectory, renameDirectory)
 import System.FilePath (takeExtension, (</>))
 
 readBMSRecords :: FilePath -> IO (Either String [BMSRecord])
@@ -51,7 +51,7 @@ processBMSFiles filepaths = do
 
 processBMSFile :: Connection -> FilePath -> IO ()
 processBMSFile conn f = do
-  b <- if "bmson" `isSuffixOf` f then processBMSON f else processBMS f
+  b <- if "bmson" `isSuffixOf` f || "BMSON" `isSuffixOf` f then processBMSON f else processBMS f
   insertBMSFile conn f b
 
 showMissing :: IO ()
@@ -86,9 +86,26 @@ getBMSFiles rootDir conn = do
     putStrLn dir
     entries <- listDirectory dir
     let fullPaths = map (dir </>) entries
-        validExts = [".bms", ".bme", ".bmson", ".bml", ".pms", ".BME", ".BMS", ".BML", ".BMSON", ".PMS"]
         bmsFiles = [f | f <- fullPaths, takeExtension f `elem` validExts]
     mapM_ (processBMSFile conn) bmsFiles
+
+renameBMSFolders :: FilePath -> IO ()
+renameBMSFolders dir = do
+  songs <- listDirectory dir
+  let fullPaths = map (dir </>) songs
+  f <- filterM doesDirectoryExist fullPaths
+  mapM_ (renameBMSFolder dir) f
+
+renameBMSFolder :: FilePath -> FilePath -> IO ()
+renameBMSFolder parent dir = do
+  entries <- listDirectory dir
+  let fullPaths = map (dir </>) entries
+      bmsFiles = [f | f <- fullPaths, takeExtension f `elem` validExts]
+  b <- mapM (\f -> if "bmson" `isSuffixOf` f || "BMSON" `isSuffixOf` f then processBMSON f else processBMS f) bmsFiles
+  let a = T.unpack $ T.replace "/" "／" $ T.strip $ commonPrefix $ fArtist <$> b
+      t = T.unpack $ T.replace "/" "／" $ T.strip $ commonPrefix $ fTitle <$> b
+      folderName = parent <> t <> " [" <> a <> "]"
+  renameDirectory dir folderName
 
 main :: IO ()
 main = do
@@ -100,16 +117,22 @@ main = do
       createFileTable conn
       getBMSFiles "/mnt/Storage/BMS stuff/" conn
       close conn
-    "r" -> do
-      processBMSFiles ["t.bms", "t.bmson"]
     "t" -> do
       putStrLn "Fetching Tables"
       getTables
     "d" -> do
       let jsonFiles = (<> ".json") . ("tables/" <>) . fst <$> difficultyTables -- Replace with your JSON file names
       processJsonFiles jsonFiles
-    (stripPrefix "d" -> Just tableName) -> do
-      putStrLn tableName
+    "r" -> do
+      renameBMSFolders "/mnt/Storage/BMS stuff/Uncategorized/"
+    (stripPrefix "i " -> Just songDirectory) -> do
+      conn <- open "bms.db"
+      entries <- listDirectory songDirectory
+      let fullPaths = map (songDirectory </>) entries
+          bmsFiles = [f | f <- fullPaths, takeExtension f `elem` validExts]
+      mapM_ (processBMSFile conn) bmsFiles
+      putStrLn "Inserted One Song"
+      close conn
     "s" -> showMissing
     _ -> return ()
   main
