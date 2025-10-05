@@ -15,19 +15,23 @@ import qualified Data.Text.ICU.Convert as ICU
 import Schema (BMSFile (..))
 
 -- getAllBMSFiles :: FilePath -> IO [BMSFile]
+
 processBMS :: FilePath -> IO BMSFile
-processBMS file = do
+processBMS f = if "bmson" `isSuffixOf` f || "BMSON" `isSuffixOf` f then parseBMSON f else parseBMS f
+
+parseBMS :: FilePath -> IO BMSFile
+parseBMS file = do
   bytestring <- B.readFile file
   result <- shiftJISToUTF8 bytestring
   let l = T.lines result
       digest = MD5.finalize $ MD5.update MD5.init bytestring
-      g txt i = case find (T.isPrefixOf txt) l of
-        Just x -> T.drop i x
+      remove txt i = case find (T.isPrefixOf txt) l of
+        Just x -> T.stripEnd $ T.drop i x
         Nothing -> ""
   return
     BMSFile
-      { fArtist = g "#ARTIST " 8
-      , fTitle = g "#TITLE " 7
+      { fArtist = remove "#ARTIST " 8
+      , fTitle = remove "#TITLE " 7
       , fMd5 = Just $ decodeUtf8 $ B16.encode digest
       , fSha256 = Nothing
       , filePath = T.pack file
@@ -51,8 +55,8 @@ instance FromJSON BMSONFile where
     BMSONFile
       <$> v .: "info"
 
-processBMSON :: FilePath -> IO BMSFile
-processBMSON file = do
+parseBMSON :: FilePath -> IO BMSFile
+parseBMSON file = do
   bytestring <- BL.readFile file
   bs <- B.readFile file
   let

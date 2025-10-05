@@ -52,6 +52,7 @@ executable bmsDatabase
     BMSFile
     FetchTable
     Schema
+    PrettyPrint
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
