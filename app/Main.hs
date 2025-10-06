@@ -183,7 +183,7 @@ main = do
       putStrLn "Inserted One Song"
       close conn
     "show" -> do
+      putStrLn "Writing Missing Files"
       showMissing
-      putStrLn "Showed Missing Songs"
     _ -> return ()
   main
