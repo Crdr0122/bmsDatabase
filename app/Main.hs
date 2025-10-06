@@ -1,10 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Main where
 
 import BMSFile (processBMS)
-import Control.Monad (filterM, when)
+import Control.Monad (filterM, unless, when)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as B
 import Data.List
@@ -13,7 +14,7 @@ import Database.SQLite.Simple
 import FetchTable (difficultyTables, getTables)
 import PrettyPrint (showMissing)
 import Schema
-import System.Directory (doesDirectoryExist, listDirectory, renameDirectory)
+import System.Directory (doesDirectoryExist, doesFileExist, listDirectory, renameDirectory)
 import System.FilePath (takeExtension, (</>))
 
 readBMSRecords :: FilePath -> IO (Either String [BMSRecord])
@@ -94,16 +95,16 @@ addBMSFiles rootDir conn = do
 
 processBMSFileIfExist :: Connection -> FilePath -> IO ()
 processBMSFileIfExist conn f = do
-  b <- fileNotExistInDb conn f
+  b <- fileNotExistInDb f
   when b $ do
     bms <- processBMS f
     insertBMSFile conn f bms
     putStrLn $ "Added " <> f
-
-fileNotExistInDb :: Connection -> FilePath -> IO Bool
-fileNotExistInDb conn f = do
-  res <- query conn "SELECT 1 FROM bms_files WHERE file_path = ?" (Only f) :: IO [[Int]]
-  return $ null res
+ where
+  fileNotExistInDb :: FilePath -> IO Bool
+  fileNotExistInDb file = do
+    res <- query conn "SELECT 1 FROM bms_files WHERE file_path = ?" (Only file) :: IO [Only Int]
+    return $ null res
 
 renameBMSFolders :: FilePath -> IO ()
 renameBMSFolders dir = do
@@ -135,6 +136,14 @@ renameBMSFolder parent dir = do
       folderName = parent <> t <> " [" <> a <> "]"
   renameDirectory dir folderName
 
+deleteBMSEntries :: IO ()
+deleteBMSEntries = do
+  conn <- open "bms.db"
+  entries <- query_ conn "SELECT file_path FROM bms_files"
+  nonExistent <- filterM (fmap not . doesFileExist . T.unpack . fromOnly) entries
+  mapM_ (execute conn "DELETE FROM bms_files WHERE file_path = ?") nonExistent
+  close conn
+
 main :: IO ()
 main = do
   arg <- getLine
@@ -155,12 +164,16 @@ main = do
       putStrLn "Fetching Tables"
       getTables
       putStrLn "Fetched Tables"
+    "delete" -> do
+      deleteBMSEntries
+      putStrLn "Deleted Extra Entries"
     "load" -> do
       let jsonFiles = (<> ".json") . ("tables/" <>) . fst <$> difficultyTables -- Replace with your JSON file names
       processTables jsonFiles
       putStrLn "Added All Tables"
     "rename" -> do
       renameBMSFolders "/mnt/Storage/BMS stuff/Uncategorized/"
+      putStrLn "Renamed Songs"
     (stripPrefix "i " -> Just songDirectory) -> do
       conn <- open "bms.db"
       entries <- listDirectory songDirectory
