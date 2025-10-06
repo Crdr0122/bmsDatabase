@@ -4,10 +4,11 @@ module PrettyPrint where
 
 import Data.Text (Text, unpack)
 import Database.SQLite.Simple
+import Schema (bmsDatabase)
 
 showMissing :: IO ()
 showMissing = do
-  conn <- open "bms.db"
+  conn <- open bmsDatabase
   res <-
     query_
       conn

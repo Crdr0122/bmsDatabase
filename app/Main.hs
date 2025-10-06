@@ -33,12 +33,12 @@ processTable conn f = do
 
 processTables :: [FilePath] -> IO ()
 processTables filePaths = do
-  conn <- open "bms.db"
+  conn <- open bmsDatabase
   execute_ conn "DROP TABLE IF EXISTS bms_records"
   createRecordTable conn
   mapM_ (processTable conn) filePaths
   close conn
-  putStrLn $ "Processed " ++ show (length filePaths) ++ " JSON files."
+  putStrLn $ "Processed " ++ show (length filePaths) ++ " tables."
 
 processBMSFile :: Connection -> FilePath -> IO ()
 processBMSFile conn f = do
@@ -140,14 +140,14 @@ main = do
   arg <- getLine
   case arg of
     "rebuild" -> do
-      conn <- open "bms.db"
+      conn <- open bmsDatabase
       execute_ conn "DROP TABLE IF EXISTS bms_files"
       createFileTable conn
       rebuildBMSFiles "/mnt/Storage/BMS stuff/" conn
       close conn
       putStrLn "Rebuilt Database"
     "add" -> do
-      conn <- open "bms.db"
+      conn <- open bmsDatabase
       addBMSFiles "/mnt/Storage/BMS stuff/" conn
       close conn
       putStrLn "Added New Songs"
@@ -162,7 +162,7 @@ main = do
     "rename" -> do
       renameBMSFolders "/mnt/Storage/BMS stuff/Uncategorized/"
     (stripPrefix "i " -> Just songDirectory) -> do
-      conn <- open "bms.db"
+      conn <- open bmsDatabase
       entries <- listDirectory songDirectory
       let fullPaths = map (songDirectory </>) entries
           bmsFiles = [f | f <- fullPaths, takeExtension f `elem` validExts]
@@ -171,6 +171,6 @@ main = do
       close conn
     "show" -> do
       showMissing
-      putStrLn "Showed Missing Songs"
+      putStrLn "Printed Missing Songs"
     _ -> return ()
   main

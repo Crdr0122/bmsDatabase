@@ -6,6 +6,9 @@ import Data.Aeson
 import Data.Text (Text, commonPrefixes)
 import Database.SQLite.Simple
 
+bmsDatabase :: String
+bmsDatabase = "bms.db"
+
 validExts :: [String]
 validExts = [".bms", ".bme", ".bmson", ".bml", ".pms", ".BME", ".BMS", ".BML", ".BMSON", ".PMS"]
 
