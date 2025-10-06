@@ -14,8 +14,6 @@ import Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text.ICU.Convert as ICU
 import Schema (BMSFile (..))
 
--- getAllBMSFiles :: FilePath -> IO [BMSFile]
-
 processBMS :: FilePath -> IO BMSFile
 processBMS f = if "bmson" `isSuffixOf` f || "BMSON" `isSuffixOf` f then parseBMSON f else parseBMS f
 
