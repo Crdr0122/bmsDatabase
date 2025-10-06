@@ -5,7 +5,7 @@
 module Main where
 
 import BMSFile (processBMS)
-import Control.Monad (filterM, unless, when)
+import Control.Monad (filterM, when)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as B
 import Data.List
