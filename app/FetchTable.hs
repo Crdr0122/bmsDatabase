@@ -4,6 +4,7 @@ module FetchTable where
 
 import qualified Data.ByteString.Lazy.Char8 as L8
 import Network.HTTP.Simple
+import Schema (tablesFolder)
 
 difficultyTables :: [(FilePath, Request)]
 difficultyTables =
@@ -29,4 +30,4 @@ getTable (n, url) = do
       ++ n
       ++ " is: "
       ++ show (getResponseStatusCode response)
-  L8.writeFile ("tables/" <> n <> ".json") $ getResponseBody response
+  L8.writeFile (tablesFolder <> n <> ".json") $ getResponseBody response

@@ -7,8 +7,14 @@ import Data.Aeson
 import Data.Text (Text, commonPrefixes)
 import Database.SQLite.Simple
 
+dataFolder :: String
+dataFolder = "/home/yu/.local/share/bmsDatabase/"
+tablesFolder :: String
+tablesFolder = dataFolder <> "tables/"
 bmsDatabase :: String
-bmsDatabase = "bms.db"
+bmsDatabase = dataFolder <> "bms.db"
+bmsActualData :: String
+bmsActualData = "/mnt/Storage/BMS stuff/"
 
 validExts :: [String]
 validExts = [".bms", ".bme", ".bmson", ".bml", ".pms", ".BME", ".BMS", ".BML", ".BMSON", ".PMS"]

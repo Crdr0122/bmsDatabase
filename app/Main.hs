@@ -138,7 +138,7 @@ renameBMSFolder parent dir = do
 
 deleteBMSEntries :: IO ()
 deleteBMSEntries = do
-  conn <- open "bms.db"
+  conn <- open bmsDatabase
   entries <- query_ conn "SELECT file_path FROM bms_files"
   nonExistent <- filterM (fmap not . doesFileExist . T.unpack . fromOnly) entries
   mapM_ (execute conn "DELETE FROM bms_files WHERE file_path = ?") nonExistent
@@ -152,12 +152,12 @@ main = do
       conn <- open bmsDatabase
       execute_ conn "DROP TABLE IF EXISTS bms_files"
       createFileTable conn
-      rebuildBMSFiles "/mnt/Storage/BMS stuff/" conn
+      rebuildBMSFiles bmsActualData conn
       close conn
       putStrLn "Rebuilt Database"
     "add" -> do
       conn <- open bmsDatabase
-      addBMSFiles "/mnt/Storage/BMS stuff/" conn
+      addBMSFiles bmsActualData conn
       close conn
       putStrLn "Added New Songs"
     "fetch" -> do
@@ -168,11 +168,11 @@ main = do
       deleteBMSEntries
       putStrLn "Deleted Extra Entries"
     "load" -> do
-      let jsonFiles = (<> ".json") . ("tables/" <>) . fst <$> difficultyTables -- Replace with your JSON file names
+      let jsonFiles = (<> ".json") . (tablesFolder <>) . fst <$> difficultyTables -- Replace with your JSON file names
       processTables jsonFiles
       putStrLn "Added All Tables"
     "rename" -> do
-      renameBMSFolders "/mnt/Storage/BMS stuff/Uncategorized/"
+      renameBMSFolders (bmsActualData <> "Uncategorized/")
       putStrLn "Renamed Songs"
     (stripPrefix "i " -> Just songDirectory) -> do
       conn <- open bmsDatabase
