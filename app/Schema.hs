@@ -80,3 +80,5 @@ commonPrefix = foldl1 pre
   pre x y = case commonPrefixes x y of
     Nothing -> ""
     Just (p, _, _) -> p
+
+normalizeTitle :: Text -> Text

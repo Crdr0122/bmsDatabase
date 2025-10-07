@@ -24,10 +24,8 @@ getTables = mapM_ getTable difficultyTables
 getTable :: (FilePath, Request) -> IO ()
 getTable (n, url) = do
   response <- httpLBS url
-
-  putStrLn $
-    "The status code for "
-      ++ n
-      ++ " is: "
-      ++ show (getResponseStatusCode response)
-  L8.writeFile (tablesFolder <> n <> ".json") $ getResponseBody response
+  case getResponseStatusCode response of
+    200 -> do
+      L8.writeFile (tablesFolder <> n <> ".json") $ getResponseBody response
+      putStrLn ("Updated " <> n)
+    err -> putStrLn $ "Error for " ++ n ++ ": " ++ show err
