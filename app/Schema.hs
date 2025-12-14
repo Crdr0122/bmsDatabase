@@ -4,7 +4,9 @@
 module Schema where
 
 import Data.Aeson
-import Data.Text (Text, commonPrefixes)
+import Data.List
+import Data.Text (Text)
+import qualified Data.Text as T
 import Database.SQLite.Simple
 
 dataFolder :: String
@@ -77,8 +79,21 @@ insertBMSFile conn fp BMSFile{..} =
 commonPrefix :: [Text] -> Text
 commonPrefix = foldl1 pre
  where
-  pre x y = case commonPrefixes x y of
+  pre x y = case T.commonPrefixes x y of
     Nothing -> ""
     Just (p, _, _) -> p
 
-normalizeTitle :: Text -> Text
+normalizeTitle :: [Text] -> String
+normalizeTitle x = T.unpack $ foldl' (\n (from, to) -> T.replace from to n) (T.strip $ commonPrefix x) illegalCharacters
+ where
+  illegalCharacters =
+    [ ("/", "／")
+    , (":", "：")
+    , ("?", "？")
+    , ("\\", "＼")
+    , ("*", "＊")
+    , ("<", "＜")
+    , (">", "＞")
+    , ("|", "｜")
+    , ("\"", "＂")
+    ]

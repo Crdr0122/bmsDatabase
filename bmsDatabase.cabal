@@ -59,7 +59,7 @@ executable bmsDatabase
   -- Other library packages from which modules are imported.
   build-depends:
     aeson,
-    base ^>=4.19.2.0,
+    base,
     base16-bytestring,
     bytestring,
     containers,
@@ -71,6 +71,8 @@ executable bmsDatabase
     sqlite-simple,
     text,
     text-icu,
+    haskeline,
+
 
   -- Directories containing source files.
   hs-source-dirs: app

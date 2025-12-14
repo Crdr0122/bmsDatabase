@@ -4,7 +4,7 @@ module PrettyPrint where
 
 import Data.Text (Text, unpack)
 import Database.SQLite.Simple
-import Schema (bmsDatabase)
+import Schema (bmsDatabase, dataFolder)
 
 showMissing :: IO ()
 showMissing = do
@@ -43,5 +43,5 @@ showMissing = do
             ++ "- **URL Diff**: "
             ++ urlDiffText
             ++ "\n\n"
-  writeFile "missing_files.md" output
+  writeFile (dataFolder <> "missing_files.md") output
   putStrLn "Missing files written to missing_files.md"
