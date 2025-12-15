@@ -1,0 +1,9 @@
+- add (all new BMS files)
+- clean (nonexistent BMS files from database)
+- refresh <dir> (add just one directory)
+- fetch (difficulty tables)
+- load (difficulty tables into database)
+- show (all missing files from difficulty tables
+- rename (BMS file directories in Uncategorized)
+- rebuild (database from scratch)
+- quit
