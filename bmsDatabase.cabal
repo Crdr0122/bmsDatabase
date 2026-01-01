@@ -51,8 +51,8 @@ executable bmsDatabase
   other-modules:
     BMSFile
     FetchTable
-    Schema
     PrettyPrint
+    Schema
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
@@ -67,12 +67,12 @@ executable bmsDatabase
     cryptohash-sha256,
     directory,
     filepath,
+    haskeline,
     http-conduit,
+    mtl,
     sqlite-simple,
     text,
     text-icu,
-    haskeline,
-
 
   -- Directories containing source files.
   hs-source-dirs: app

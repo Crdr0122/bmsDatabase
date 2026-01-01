@@ -3,42 +3,45 @@
 
 module Schema where
 
+import Control.Monad.Reader -- for ReaderT, ask, asks, runReaderT
 import Data.Aeson
-import Data.List
 import Data.Text (Text)
 import qualified Data.Text as T
 import Database.SQLite.Simple
+import Network.HTTP.Simple
 
-dataFolder :: String
-dataFolder = "/home/yu/.local/share/bmsDatabase/"
-tablesFolder :: String
-tablesFolder = dataFolder <> "tables/"
-bmsDatabase :: String
-bmsDatabase = dataFolder <> "bms.db"
-bmsActualData :: String
-bmsActualData = "/mnt/Storage/BMS stuff/"
+data Config = Config
+  { bmsFolder :: FilePath,
+    dbPath :: FilePath,
+    missingFiles :: FilePath,
+    tablesFolder :: FilePath,
+    difficultyTables :: [(FilePath, Request)]
+  }
+  deriving (Show)
+
+type App = ReaderT Config IO -- Your app monad: config + IO
 
 validExts :: [String]
 validExts = [".bms", ".bme", ".bmson", ".bml", ".pms", ".BME", ".BMS", ".BML", ".BMSON", ".PMS"]
 
 data BMSRecord = BMSRecord
-  { artist :: Text
-  , level :: Text
-  , title :: Text
-  , url :: Maybe Text
-  , url_diff :: Maybe Text
-  , comment :: Maybe Text
-  , md5 :: Maybe Text
-  , sha256 :: Maybe Text
+  { artist :: Text,
+    level :: Text,
+    title :: Text,
+    url :: Maybe Text,
+    url_diff :: Maybe Text,
+    comment :: Maybe Text,
+    md5 :: Maybe Text,
+    sha256 :: Maybe Text
   }
   deriving (Show)
 
 data BMSFile = BMSFile
-  { fArtist :: Text
-  , fTitle :: Text
-  , fMd5 :: Maybe Text
-  , fSha256 :: Maybe Text
-  , filePath :: Text
+  { fArtist :: Text,
+    fTitle :: Text,
+    fMd5 :: Maybe Text,
+    fSha256 :: Maybe Text,
+    filePath :: Text
   }
   deriving (Show)
 
@@ -63,14 +66,14 @@ createFileTable conn =
   execute_ conn "CREATE TABLE IF NOT EXISTS bms_files (id INTEGER PRIMARY KEY AUTOINCREMENT, artist TEXT, title TEXT, file_path TEXT NOT NULL, md5 TEXT, sha256 TEXT, UNIQUE(file_path))"
 
 insertRecord :: Connection -> String -> BMSRecord -> IO ()
-insertRecord conn sourceTable BMSRecord{..} =
+insertRecord conn sourceTable BMSRecord {..} =
   execute
     conn
     "INSERT INTO bms_records (source_table, artist, level, title, url, url_diff, comment, md5, sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     (sourceTable, artist, level, title, url, url_diff, comment, md5, sha256)
 
 insertBMSFile :: Connection -> String -> BMSFile -> IO ()
-insertBMSFile conn fp BMSFile{..} =
+insertBMSFile conn fp BMSFile {..} =
   execute
     conn
     "INSERT INTO bms_files (file_path, artist, title, md5, sha256) VALUES (?,?,?,?,?)"
@@ -78,22 +81,22 @@ insertBMSFile conn fp BMSFile{..} =
 
 commonPrefix :: [Text] -> Text
 commonPrefix = foldl1 pre
- where
-  pre x y = case T.commonPrefixes x y of
-    Nothing -> ""
-    Just (p, _, _) -> p
+  where
+    pre x y = case T.commonPrefixes x y of
+      Nothing -> ""
+      Just (p, _, _) -> p
 
 normalizeTitle :: [Text] -> String
 normalizeTitle x = T.unpack $ foldl' (\n (from, to) -> T.replace from to n) (T.strip $ commonPrefix x) illegalCharacters
- where
-  illegalCharacters =
-    [ ("/", "／")
-    , (":", "：")
-    , ("?", "？")
-    , ("\\", "＼")
-    , ("*", "＊")
-    , ("<", "＜")
-    , (">", "＞")
-    , ("|", "｜")
-    , ("\"", "＂")
-    ]
+  where
+    illegalCharacters =
+      [ ("/", "／"),
+        (":", "："),
+        ("?", "？"),
+        ("\\", "＼"),
+        ("*", "＊"),
+        ("<", "＜"),
+        (">", "＞"),
+        ("|", "｜"),
+        ("\"", "＂")
+      ]

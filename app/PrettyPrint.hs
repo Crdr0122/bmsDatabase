@@ -4,11 +4,9 @@ module PrettyPrint where
 
 import Data.Text (Text, unpack)
 import Database.SQLite.Simple
-import Schema (bmsDatabase, dataFolder)
 
-showMissing :: IO ()
-showMissing = do
-  conn <- open bmsDatabase
+showMissing :: Connection -> FilePath -> IO ()
+showMissing conn missing = do
   res <-
     query_
       conn
@@ -21,27 +19,25 @@ showMissing = do
           then "# Missing Files\n\nNone\n"
           else "# Missing Files\n\n" ++ concatMap formatRecord res
       formatRecord (source_table, title, artist, level, url, url_diff) =
-        let
-          urlText = maybe "None" (\u -> "[" ++ unpack u ++ "](" ++ unpack u ++ ")") url
-          urlDiffText = maybe "None" (\u -> "[" ++ unpack u ++ "](" ++ unpack u ++ ")") url_diff
-         in
-          "## "
-            ++ unpack source_table
-            ++ "\n"
-            ++ "- **Title**: "
-            ++ unpack title
-            ++ "\n"
-            ++ "- **Artist**: "
-            ++ unpack artist
-            ++ "\n"
-            ++ "- **Level**: "
-            ++ unpack level
-            ++ "\n"
-            ++ "- **URL**: "
-            ++ urlText
-            ++ "\n"
-            ++ "- **URL Diff**: "
-            ++ urlDiffText
-            ++ "\n\n"
-  writeFile (dataFolder <> "missing_files.md") output
+        let urlText = maybe "None" (\u -> "[" ++ unpack u ++ "](" ++ unpack u ++ ")") url
+            urlDiffText = maybe "None" (\u -> "[" ++ unpack u ++ "](" ++ unpack u ++ ")") url_diff
+         in "## "
+              ++ unpack source_table
+              ++ "\n"
+              ++ "- **Title**: "
+              ++ unpack title
+              ++ "\n"
+              ++ "- **Artist**: "
+              ++ unpack artist
+              ++ "\n"
+              ++ "- **Level**: "
+              ++ unpack level
+              ++ "\n"
+              ++ "- **URL**: "
+              ++ urlText
+              ++ "\n"
+              ++ "- **URL Diff**: "
+              ++ urlDiffText
+              ++ "\n\n"
+  writeFile missing output
   putStrLn "Missing files written to missing_files.md"

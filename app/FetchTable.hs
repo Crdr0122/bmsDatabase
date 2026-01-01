@@ -7,20 +7,20 @@ import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString.Lazy.Char8 as L8
 import Database.SQLite.Simple
 import Network.HTTP.Simple
-import Schema (BMSRecord, bmsDatabase, createRecordTable, insertRecord, tablesFolder)
+import Schema (App, BMSRecord, createRecordTable, insertRecord)
 
-difficultyTables :: [(FilePath, Request)]
-difficultyTables =
-  [ ("Satellite", "https://stellabms.xyz/sl/score.json")
-  , ("Solar", "https://stellabms.xyz/so/score.json")
-  , ("New_Generation_Normal", "https://rattoto10.github.io/second_table/score.json")
-  , ("New_Generation_Insane", "https://rattoto10.github.io/second_table/insane_data.json")
-  , ("Starlight", "https://djkuroakari.github.io/data.json")
-  , ("Normal", "https://darksabun.github.io/table/archive/normal1/data.json")
-  , ("Insane", "https://darksabun.github.io/table/archive/insane1/data.json")
-  , ("Scramble", "https://script.google.com/macros/s/AKfycbw5pnMwlCFZz7wDY5kRsBpfSm0-luKszs8LQAEE6BKkVT1R78-CpB4WA9chW-gdBsF7IA/exec")
-  ]
-
+-- difficultyTables :: [(FilePath, Request)]
+-- difficultyTables =
+--   [ ("Satellite", "https://stellabms.xyz/sl/score.json"),
+--     ("Solar", "https://stellabms.xyz/so/score.json"),
+--     ("New_Generation_Normal", "https://rattoto10.github.io/second_table/score.json"),
+--     ("New_Generation_Insane", "https://rattoto10.github.io/second_table/insane_data.json"),
+--     ("Starlight", "https://djkuroakari.github.io/data.json"),
+--     ("Normal", "https://darksabun.github.io/table/archive/normal1/data.json"),
+--     ("Insane", "https://darksabun.github.io/table/archive/insane1/data.json"),
+--     ("Scramble", "https://script.google.com/macros/s/AKfycbw5pnMwlCFZz7wDY5kRsBpfSm0-luKszs8LQAEE6BKkVT1R78-CpB4WA9chW-gdBsF7IA/exec")
+--   ]
+--
 getTables :: IO ()
 getTables = mapM_ getTable difficultyTables
 
