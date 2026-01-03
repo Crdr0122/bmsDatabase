@@ -3,7 +3,7 @@
 
 module Schema where
 
-import Control.Monad.Reader -- for ReaderT, ask, asks, runReaderT
+import Control.Monad.Reader
 import Data.Aeson
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -44,6 +44,7 @@ data BMSFile = BMSFile
     filePath :: Text
   }
   deriving (Show)
+
 
 instance FromJSON BMSRecord where
   parseJSON = withObject "BMSRecord" $ \v ->

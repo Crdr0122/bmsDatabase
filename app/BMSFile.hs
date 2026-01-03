@@ -37,6 +37,8 @@ instance FromJSON BMSONFile where
     BMSONFile
       <$> v .: "info"
 
+
+
 processBMS :: FilePath -> IO BMSFile
 processBMS f = if "bmson" `isSuffixOf` f || "BMSON" `isSuffixOf` f then parseBMSON f else parseBMS f
 
