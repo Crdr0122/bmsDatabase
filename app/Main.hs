@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Main where
 
@@ -133,9 +133,9 @@ main = do
     Left err -> do
       putStrLn $ "Error parsing config file: " ++ err
       return ("", [])
-    Right ConfigFile {actualBMSData = bmsF, configFileTables = f} -> do
-      let t = map (\DifficultyTable {tableName = x, tableUrl = y} -> (unpack x, parseRequest_ (unpack y))) f
-      return (unpack bmsF, t)
+    Right ConfigFile {..} -> do
+      let t = map (\DifficultyTable {..} -> (unpack tableName, parseRequest_ (unpack tableUrl))) configFileTables
+      return (unpack actualBMSData, t)
 
   xdgDataDir <- getXdgDirectory XdgData "bmsDatabase/"
   let config =

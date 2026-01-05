@@ -1,6 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module BMSFile where
+module BMSFile
+  ( addBMSFiles,
+    deleteBMSEntries,
+    processBMSFileIfExist,
+    rebuildBMSFiles,
+    renameBMSFolders,
+  )
+where
 
 import Control.Monad (filterM, when)
 import qualified Crypto.Hash.MD5 as MD5
@@ -36,8 +43,6 @@ instance FromJSON BMSONFile where
   parseJSON = withObject "BMSONFile" $ \v ->
     BMSONFile
       <$> v .: "info"
-
-
 
 processBMS :: FilePath -> IO BMSFile
 processBMS f = if "bmson" `isSuffixOf` f || "BMSON" `isSuffixOf` f then parseBMSON f else parseBMS f

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module PrettyPrint where
+module PrettyPrint (showMissing) where
 
 import Data.Text (Text, unpack)
 import Database.SQLite.Simple

@@ -1,6 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module FetchTable where
+module FetchTable
+  ( getTables,
+    processTables,
+  )
+where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as B

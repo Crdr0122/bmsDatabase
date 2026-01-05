@@ -1,7 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Schema where
+module Schema
+  ( App,
+    Config (..),
+    BMSRecord (..),
+    BMSFile (..),
+    validExts,
+    normalizeTitle,
+    insertBMSFile,
+    insertRecord,
+    createRecordTable,
+    createFileTable,
+  )
+where
 
 import Control.Monad.Reader
 import Data.Aeson
@@ -44,7 +56,6 @@ data BMSFile = BMSFile
     filePath :: Text
   }
   deriving (Show)
-
 
 instance FromJSON BMSRecord where
   parseJSON = withObject "BMSRecord" $ \v ->
