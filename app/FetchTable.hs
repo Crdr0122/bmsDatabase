@@ -11,39 +11,39 @@ import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString.Lazy.Char8 as L8
 import Database.SQLite.Simple
 import Network.HTTP.Simple
-import Schema (BMSRecord, createRecordTable, insertRecord)
+import Schema (BMSRecord, LogChan, createRecordTable, insertRecord, writeLog)
 
-getTables :: [(FilePath, Request)] -> FilePath -> IO ()
-getTables difficultyTableList tableFolder = mapM_ (getTable tableFolder) difficultyTableList
+getTables :: [(FilePath, Request)] -> FilePath -> LogChan -> IO ()
+getTables difficultyTableList tableFolder logChan = mapM_ (getTable tableFolder logChan) difficultyTableList
 
-getTable :: FilePath -> (FilePath, Request) -> IO ()
-getTable tableFolder (n, url) = do
+getTable :: FilePath -> LogChan -> (FilePath, Request) -> IO ()
+getTable tableFolder logChan (n, url) = do
   response <- httpLBS url
   case getResponseStatusCode response of
     200 -> do
       L8.writeFile (tableFolder <> n <> ".json") $ getResponseBody response
       putStrLn ("Updated " <> n)
-    err -> putStrLn $ "Error for " ++ n ++ ": " ++ show err
+      writeLog logChan ("Updated " <> n)
+    err -> writeLog logChan $ "Error for " ++ n ++ ": " ++ show err
 
 readBMSRecords :: FilePath -> IO (Either String [BMSRecord])
 readBMSRecords f = do
   jsonData <- B.readFile f
   return $ eitherDecode jsonData
 
-processTables :: Connection -> FilePath -> [FilePath] -> IO ()
-processTables conn tableFolder filePaths = do
+processTables :: Connection -> FilePath -> [FilePath] -> LogChan -> IO ()
+processTables conn tableFolder filePaths logChan = do
   execute_ conn "DROP TABLE IF EXISTS bms_records"
   createRecordTable conn
-  mapM_ (processTable conn tableFolder) filePaths
-  close conn
-  putStrLn $ "Processed " ++ show (length filePaths) ++ " tables."
+  mapM_ (processTable conn tableFolder logChan) filePaths
+  writeLog logChan $ "Processed " ++ show (length filePaths) ++ " tables."
 
-processTable :: Connection -> FilePath -> FilePath -> IO ()
-processTable conn tableFolder tableFile = do
+processTable :: Connection -> FilePath -> LogChan -> FilePath -> IO ()
+processTable conn tableFolder logChan tableFile = do
   result <- readBMSRecords tableFile
   let tableName = takeWhile (/= '.') $ drop (length tableFolder) tableFile
   case result of
-    Left err -> putStrLn $ "Error parsing JSON file " ++ tableFile ++ ": " ++ err
+    Left err -> writeLog logChan $ "Error parsing JSON file " ++ tableFile ++ ": " ++ err
     Right records -> do
       mapM_ (insertRecord conn tableName) records
-      putStrLn $ "Inserted " ++ show (length records) ++ " records from " ++ tableName
+      writeLog logChan $ "Inserted " ++ show (length records) ++ " records from " ++ tableName

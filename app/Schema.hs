@@ -2,25 +2,38 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Schema
-  ( App,
-    Config (..),
-    BMSRecord (..),
+  ( BMSRecord (..),
     BMSFile (..),
+    Config (..),
+    ConfigFile (..),
+    DifficultyTable (..),
+    LogMessage (..),
+    LogChan,
     validExts,
     normalizeTitle,
     insertBMSFile,
     insertRecord,
     createRecordTable,
+    writeLog,
     createFileTable,
   )
 where
 
-import Control.Monad.Reader
+import Control.Concurrent.Chan (Chan, writeChan)
 import Data.Aeson
 import Data.Text (Text)
 import qualified Data.Text as T
 import Database.SQLite.Simple
 import Network.HTTP.Simple
+
+data LogMessage
+  = LogMessage T.Text -- Text to display
+  | ClearLog
+
+type LogChan = Chan LogMessage
+
+writeLog :: LogChan -> String -> IO ()
+writeLog chan msg = writeChan chan (LogMessage (T.pack msg))
 
 data Config = Config
   { bmsFolder :: FilePath,
@@ -30,11 +43,6 @@ data Config = Config
     difficultyTables :: [(FilePath, Request)]
   }
   deriving (Show)
-
-type App = ReaderT Config IO -- Your app monad: config + IO
-
-validExts :: [String]
-validExts = [".bms", ".bme", ".bmson", ".bml", ".pms", ".BME", ".BMS", ".BML", ".BMSON", ".PMS"]
 
 data BMSRecord = BMSRecord
   { artist :: Text,
@@ -68,6 +76,39 @@ instance FromJSON BMSRecord where
       <*> v .:? "comment"
       <*> v .:? "md5"
       <*> v .:? "sha256"
+
+data ConfigFile = ConfigFile
+  { actualBMSData :: Text,
+    configFileTables :: [DifficultyTable]
+  }
+  deriving (Show)
+
+instance FromJSON ConfigFile where
+  parseJSON = withObject "ConfigFile" $ \v ->
+    ConfigFile
+      <$> v .: "BMS Folder"
+      <*> v .: "Difficulty Tables"
+
+data DifficultyTable = DifficultyTable
+  { tableUrl :: Text,
+    tableName :: Text
+  }
+  deriving (Show)
+
+instance FromJSON DifficultyTable where
+  parseJSON = withObject "DifficultyTable" $ \v ->
+    DifficultyTable
+      <$> v .: "url"
+      <*> v .: "name"
+
+data AppState = AppState
+  { appConfig :: Config,
+    appStatus :: String, -- Current status message
+    appRunning :: Bool -- Is operation running?
+  }
+
+validExts :: [String]
+validExts = [".bms", ".bme", ".bmson", ".bml", ".pms", ".BME", ".BMS", ".BML", ".BMSON", ".PMS"]
 
 createRecordTable :: Connection -> IO ()
 createRecordTable conn = do

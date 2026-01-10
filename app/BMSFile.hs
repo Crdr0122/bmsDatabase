@@ -21,7 +21,7 @@ import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text.ICU.Convert as ICU
 import Database.SQLite.Simple
-import Schema (BMSFile (..), insertBMSFile, normalizeTitle, validExts)
+import Schema (BMSFile (..), LogChan, insertBMSFile, normalizeTitle, validExts, writeLog)
 import System.Directory (doesDirectoryExist, doesFileExist, listDirectory, renameDirectory)
 import System.FilePath (takeExtension, (</>))
 
@@ -76,8 +76,8 @@ rebuildBMSFiles rootDir conn = do
           bmsFiles = [f | f <- fullPaths, takeExtension f `elem` validExts]
       mapM_ (processBMSFile conn) bmsFiles
 
-addBMSFiles :: FilePath -> Connection -> IO ()
-addBMSFiles rootDir conn = do
+addBMSFiles :: FilePath -> Connection -> LogChan -> IO ()
+addBMSFiles rootDir conn logChan = do
   packs <- getSubdirectories rootDir
   mapM_ getFilesFromSubdirs packs
   where
@@ -97,15 +97,15 @@ addBMSFiles rootDir conn = do
       entries <- listDirectory dir
       let fullPaths = map (dir </>) entries
           bmsFiles = [f | f <- fullPaths, takeExtension f `elem` validExts]
-      mapM_ (processBMSFileIfExist conn) bmsFiles
+      mapM_ (processBMSFileIfExist conn logChan) bmsFiles
 
-processBMSFileIfExist :: Connection -> FilePath -> IO ()
-processBMSFileIfExist conn f = do
+processBMSFileIfExist :: Connection -> LogChan -> FilePath -> IO ()
+processBMSFileIfExist conn logChan f = do
   b <- fileNotExistInDb f
   when b $ do
     bms <- processBMS f
     insertBMSFile conn f bms
-    putStrLn $ "Added " <> f
+    writeLog logChan $ "Added " <> f
   where
     fileNotExistInDb :: FilePath -> IO Bool
     fileNotExistInDb file = do
@@ -135,7 +135,6 @@ deleteBMSEntries conn = do
   entries <- query_ conn "SELECT file_path FROM bms_files"
   nonExistent <- filterM (fmap not . doesFileExist . T.unpack . fromOnly) entries
   mapM_ (execute conn "DELETE FROM bms_files WHERE file_path = ?") nonExistent
-  close conn
 
 parseBMS :: FilePath -> IO BMSFile
 parseBMS file = do
