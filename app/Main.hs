@@ -21,17 +21,16 @@ main = do
     Left err -> do
       putStrLn $ "Error parsing config file: " ++ err
       error "Wrong Config"
-    Right ConfigFile {..} -> do
-      let t = map (\DifficultyTable {..} -> (unpack tableName, parseRequest_ (unpack tableUrl))) configFileTables
+    Right ConfigFile{..} -> do
+      let t = map (\DifficultyTable{..} -> (unpack tableName, parseRequest_ (unpack tableUrl))) configFileTables
       return (unpack actualBMSData, t)
 
   xdgDataDir <- getXdgDirectory XdgData "bmsDatabase/"
   let config =
         Config
-          { bmsFolder = bmsFiles,
-            dbPath = xdgDataDir <> "bms.db",
-            missingFiles = xdgDataDir <> "missing.md",
-            tablesFolder = xdgDataDir <> "tables/",
-            difficultyTables = t
+          { bmsFolder = bmsFiles
+          , dbPath = xdgDataDir <> "bms.db"
+          , tablesFolder = xdgDataDir <> "tables/"
+          , difficultyTables = t
           }
   GUI.startApp config

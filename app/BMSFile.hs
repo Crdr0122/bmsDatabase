@@ -56,6 +56,7 @@ rebuildBMSFiles :: FilePath -> Connection -> IO ()
 rebuildBMSFiles rootDir conn = do
   packs <- getSubdirectories rootDir
   mapM_ getFilesFromSubdirs packs
+  close conn
   where
     getSubdirectories :: FilePath -> IO [FilePath]
     getSubdirectories dir = do
@@ -80,6 +81,7 @@ addBMSFiles :: FilePath -> Connection -> LogChan -> IO ()
 addBMSFiles rootDir conn logChan = do
   packs <- getSubdirectories rootDir
   mapM_ getFilesFromSubdirs packs
+  close conn
   where
     getSubdirectories :: FilePath -> IO [FilePath]
     getSubdirectories dir = do
@@ -135,6 +137,7 @@ deleteBMSEntries conn = do
   entries <- query_ conn "SELECT file_path FROM bms_files"
   nonExistent <- filterM (fmap not . doesFileExist . T.unpack . fromOnly) entries
   mapM_ (execute conn "DELETE FROM bms_files WHERE file_path = ?") nonExistent
+  close conn
 
 parseBMS :: FilePath -> IO BMSFile
 parseBMS file = do

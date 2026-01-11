@@ -1,22 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Schema
-  ( BMSRecord (..),
-    BMSFile (..),
-    Config (..),
-    ConfigFile (..),
-    DifficultyTable (..),
-    LogMessage (..),
-    LogChan,
-    validExts,
-    normalizeTitle,
-    insertBMSFile,
-    insertRecord,
-    createRecordTable,
-    writeLog,
-    createFileTable,
-  )
+module Schema (
+  BMSRecord (..),
+  BMSFile (..),
+  Config (..),
+  ConfigFile (..),
+  DifficultyTable (..),
+  LogMessage (..),
+  LogChan,
+  validExts,
+  normalizeTitle,
+  insertBMSFile,
+  insertRecord,
+  createRecordTable,
+  writeLog,
+  createFileTable,
+)
 where
 
 import Control.Concurrent.Chan (Chan, writeChan)
@@ -36,32 +36,31 @@ writeLog :: LogChan -> String -> IO ()
 writeLog chan msg = writeChan chan (LogMessage (T.pack msg))
 
 data Config = Config
-  { bmsFolder :: FilePath,
-    dbPath :: FilePath,
-    missingFiles :: FilePath,
-    tablesFolder :: FilePath,
-    difficultyTables :: [(FilePath, Request)]
+  { bmsFolder :: FilePath
+  , dbPath :: FilePath
+  , tablesFolder :: FilePath
+  , difficultyTables :: [(FilePath, Request)]
   }
   deriving (Show)
 
 data BMSRecord = BMSRecord
-  { artist :: Text,
-    level :: Text,
-    title :: Text,
-    url :: Maybe Text,
-    url_diff :: Maybe Text,
-    comment :: Maybe Text,
-    md5 :: Maybe Text,
-    sha256 :: Maybe Text
+  { artist :: Text
+  , level :: Text
+  , title :: Text
+  , url :: Maybe Text
+  , url_diff :: Maybe Text
+  , comment :: Maybe Text
+  , md5 :: Maybe Text
+  , sha256 :: Maybe Text
   }
   deriving (Show)
 
 data BMSFile = BMSFile
-  { fArtist :: Text,
-    fTitle :: Text,
-    fMd5 :: Maybe Text,
-    fSha256 :: Maybe Text,
-    filePath :: Text
+  { fArtist :: Text
+  , fTitle :: Text
+  , fMd5 :: Maybe Text
+  , fSha256 :: Maybe Text
+  , filePath :: Text
   }
   deriving (Show)
 
@@ -78,8 +77,8 @@ instance FromJSON BMSRecord where
       <*> v .:? "sha256"
 
 data ConfigFile = ConfigFile
-  { actualBMSData :: Text,
-    configFileTables :: [DifficultyTable]
+  { actualBMSData :: Text
+  , configFileTables :: [DifficultyTable]
   }
   deriving (Show)
 
@@ -90,8 +89,8 @@ instance FromJSON ConfigFile where
       <*> v .: "Difficulty Tables"
 
 data DifficultyTable = DifficultyTable
-  { tableUrl :: Text,
-    tableName :: Text
+  { tableUrl :: Text
+  , tableName :: Text
   }
   deriving (Show)
 
@@ -100,12 +99,6 @@ instance FromJSON DifficultyTable where
     DifficultyTable
       <$> v .: "url"
       <*> v .: "name"
-
-data AppState = AppState
-  { appConfig :: Config,
-    appStatus :: String, -- Current status message
-    appRunning :: Bool -- Is operation running?
-  }
 
 validExts :: [String]
 validExts = [".bms", ".bme", ".bmson", ".bml", ".pms", ".BME", ".BMS", ".BML", ".BMSON", ".PMS"]
@@ -119,14 +112,14 @@ createFileTable conn =
   execute_ conn "CREATE TABLE IF NOT EXISTS bms_files (id INTEGER PRIMARY KEY AUTOINCREMENT, artist TEXT, title TEXT, file_path TEXT NOT NULL, md5 TEXT, sha256 TEXT, UNIQUE(file_path))"
 
 insertRecord :: Connection -> String -> BMSRecord -> IO ()
-insertRecord conn sourceTable BMSRecord {..} =
+insertRecord conn sourceTable BMSRecord{..} =
   execute
     conn
     "INSERT INTO bms_records (source_table, artist, level, title, url, url_diff, comment, md5, sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     (sourceTable, artist, level, title, url, url_diff, comment, md5, sha256)
 
 insertBMSFile :: Connection -> String -> BMSFile -> IO ()
-insertBMSFile conn fp BMSFile {..} =
+insertBMSFile conn fp BMSFile{..} =
   execute
     conn
     "INSERT INTO bms_files (file_path, artist, title, md5, sha256) VALUES (?,?,?,?,?)"
@@ -134,22 +127,24 @@ insertBMSFile conn fp BMSFile {..} =
 
 commonPrefix :: [Text] -> Text
 commonPrefix = foldl1 pre
-  where
-    pre x y = case T.commonPrefixes x y of
-      Nothing -> ""
-      Just (p, _, _) -> p
+ where
+  pre x y = case T.commonPrefixes x y of
+    Nothing -> ""
+    Just (p, _, _) -> p
 
 normalizeTitle :: [Text] -> String
 normalizeTitle x = T.unpack $ foldl' (\n (from, to) -> T.replace from to n) (T.strip $ commonPrefix x) illegalCharacters
-  where
-    illegalCharacters =
-      [ ("/", "／"),
-        (":", "："),
-        ("?", "？"),
-        ("\\", "＼"),
-        ("*", "＊"),
-        ("<", "＜"),
-        (">", "＞"),
-        ("|", "｜"),
-        ("\"", "＂")
-      ]
+ where
+  illegalCharacters =
+    [ ("/", "／")
+    , (":", "：")
+    , ("?", "？")
+    , ("\\", "＼")
+    , ("*", "＊")
+    , ("<", "＜")
+    , (">", "＞")
+    , ("|", "｜")
+    , ("\"", "＂")
+    ]
+
+

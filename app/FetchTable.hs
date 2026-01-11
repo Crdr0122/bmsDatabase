@@ -22,7 +22,7 @@ getTable tableFolder logChan (n, url) = do
   case getResponseStatusCode response of
     200 -> do
       L8.writeFile (tableFolder <> n <> ".json") $ getResponseBody response
-      putStrLn ("Updated " <> n)
+      -- putStrLn ("Updated " <> n)
       writeLog logChan ("Updated " <> n)
     err -> writeLog logChan $ "Error for " ++ n ++ ": " ++ show err
 
@@ -36,6 +36,7 @@ processTables conn tableFolder filePaths logChan = do
   execute_ conn "DROP TABLE IF EXISTS bms_records"
   createRecordTable conn
   mapM_ (processTable conn tableFolder logChan) filePaths
+  close conn
   writeLog logChan $ "Processed " ++ show (length filePaths) ++ " tables."
 
 processTable :: Connection -> FilePath -> LogChan -> FilePath -> IO ()
