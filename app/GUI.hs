@@ -18,6 +18,7 @@ import qualified Data.Text as T
 import qualified GI.GLib as GLib
 import qualified GI.Gio as Gio
 import qualified GI.Gtk as Gtk
+import qualified GI.Pango as Pango
 import Schema (BMSFile (..), Config (bmsFolder), LogMessage (..))
 import TypeWrappers (BMSFileWrapper (..), MissingBMS (..), MissingBMSWrapper (..))
 
@@ -42,16 +43,18 @@ activate app config logChan = do
       ]
 
   missingGtype <- registerGType MissingBMSWrapper
-  missingListStore <-
-    new
-      Gio.ListStore
-      [#itemType := missingGtype]
+  fileGType <- registerGType BMSFileWrapper
+
+  missingListStore <- new Gio.ListStore [#itemType := missingGtype]
+  fileListStore <- new Gio.ListStore [#itemType := fileGType]
+
+  searchEntry <- new Gtk.SearchEntry [#searchDelay := 250]
 
   let buttons =
-        [ ("Rebuild Database", rebuildDatabase)
-        , ("Add New Songs", addNewSongs)
+        [ ("Rebuild Database", rebuildDatabase fileListStore)
+        , ("Add New Songs", addNewSongs fileListStore)
+        , ("Clean Database", cleanDatabase fileListStore)
         , ("Fetch Tables", fetchTables)
-        , ("Clean Database", cleanDatabase)
         , ("Load Tables", loadTables)
         , ("Rename Uncategorized", renameUncategorized)
         , ("Show Missing Files", showMissingFiles missingListStore)
@@ -61,7 +64,7 @@ activate app config logChan = do
     new
       Gtk.Box
       [ #orientation := Gtk.OrientationVertical
-      , #spacing := 3
+      , #spacing := 5
       ]
 
   forM_ buttons $ \(buttonLabel, action) -> do
@@ -132,36 +135,45 @@ activate app config logChan = do
       Gtk.ScrolledWindow
       [ #child := missingColumnView
       , #hexpand := True
-      , #widthRequest := 300
+      , #widthRequest := 200
       ]
 
-  addMissingSimpleColumn missingColumnView "Table" source_table
-  addMissingSimpleColumn missingColumnView "Level" level
-  addMissingSimpleColumn missingColumnView "Artist" artist
-  addMissingSimpleColumn missingColumnView "Title" title
+  addMissingSimpleColumn missingColumnView "Artist" artist False
+  addMissingSimpleColumn missingColumnView "Title" title True
 
   addButtonColumn missingColumnView "URL" (fromMaybe "" . url)
   addButtonColumn missingColumnView "Diff" (fromMaybe "" . url_diff)
+  addToggleColumn missingColumnView
 
-  addMissingSimpleColumn missingColumnView "Comment" (fromMaybe "" . comment)
+  addMissingSimpleColumn missingColumnView "Comment" (fromMaybe "" . comment) False
+  addMissingSimpleColumn missingColumnView "Table" source_table False
+  addMissingSimpleColumn missingColumnView "Level" level False
 
-  fileGType <- registerGType MissingBMSWrapper
-  fileListStore <-
-    new
-      Gio.ListStore
-      [#itemType := fileGType]
+  let customFileFilterFunc o = do
+        maybeWrapper <- castTo BMSFileWrapper o
+        case maybeWrapper of
+          Nothing -> pure False
+          Just wrapper -> do
+            priv <- gobjectGetPrivateData wrapper
+            search <- get searchEntry #text
+            let match t = T.toCaseFold search `T.isInfixOf` T.toCaseFold t
+            pure $ match (fTitle priv) || match (fArtist priv)
+  customFileFilter <- Gtk.customFilterNew (Just customFileFilterFunc)
+
+  void $ on searchEntry #searchChanged $ #changed customFileFilter Gtk.FilterChangeDifferent
+
+  #append buttonBox searchEntry
 
   fileFilterModel <-
     new
       Gtk.FilterListModel
       [ #model := fileListStore
+      , #incremental := True
+      , #filter := customFileFilter
       ]
 
-  fileSelectionModel <-
-    new
-      Gtk.MultiSelection
-      [ #model := fileFilterModel
-      ]
+  fileSelectionModel <- new Gtk.MultiSelection [#model := fileFilterModel]
+
   fileColumnView <-
     new
       Gtk.ColumnView
@@ -174,12 +186,13 @@ activate app config logChan = do
       Gtk.ScrolledWindow
       [ #child := fileColumnView
       , #hexpand := True
-      , #widthRequest := 300
+      , #widthRequest := 200
       ]
+
   let len = length $ bmsFolder config
-  addFileSimpleColumn fileColumnView "Artist" fArtist
-  addFileSimpleColumn fileColumnView "Title" fTitle
-  addFileSimpleColumn fileColumnView "Path" (T.drop len . filePath)
+  addFileSimpleColumn fileColumnView "Artist" fArtist False
+  addFileSimpleColumn fileColumnView "Title" fTitle False
+  addFileSimpleColumn fileColumnView "Path" (T.drop len . filePath) True
 
   bottomBox <-
     new
@@ -258,14 +271,24 @@ logUpdater buffer textView chan = forever $ do
         Gtk.textBufferDelete buffer start end
         return False
 
-addMissingSimpleColumn :: (MonadIO m) => Gtk.ColumnView -> T.Text -> (MissingBMS -> T.Text) -> m ()
-addMissingSimpleColumn colView columnTitle getText = do
+addMissingSimpleColumn :: (MonadIO m) => Gtk.ColumnView -> T.Text -> (MissingBMS -> T.Text) -> Bool -> m ()
+addMissingSimpleColumn colView columnTitle getText expandable = do
   factory <- new Gtk.SignalListItemFactory []
 
   void $ on factory #setup $ \o -> do
     res <- runMaybeT $ do
       listItem <- MaybeT $ castTo Gtk.ListItem o
-      label <- new Gtk.Label [#selectable := True, #halign := Gtk.AlignStart]
+      label <-
+        new
+          Gtk.Label
+          [ #selectable := True
+          , #halign := Gtk.AlignStart
+          , #marginEnd := 5
+          , #marginStart := 2
+          , #marginBottom := 1
+          , #marginTop := 1
+          , #ellipsize := Pango.EllipsizeModeEnd
+          ]
       #setChild listItem (Just label)
     case res of
       Nothing -> putStrLn "initListItem failed"
@@ -281,7 +304,7 @@ addMissingSimpleColumn colView columnTitle getText = do
       bmsRecord <- liftIO $ gobjectGetPrivateData missingBMSWrapper
       let text = getText bmsRecord
       set label [#label := text]
-      Gtk.widgetSetTooltipText label (Just (text))
+      Gtk.widgetSetTooltipText label (Just text)
     case res of
       Nothing -> putStrLn "bindListItem failed"
       Just () -> return ()
@@ -291,19 +314,31 @@ addMissingSimpleColumn colView columnTitle getText = do
       Gtk.ColumnViewColumn
       [ #title := columnTitle
       , #factory := factory
-      , #expand := True
+      , #expand := expandable
+      , #resizable := True
+      , #fixedWidth := 270
       ]
 
   Gtk.columnViewAppendColumn colView column
 
-addFileSimpleColumn :: (MonadIO m) => Gtk.ColumnView -> T.Text -> (BMSFile -> T.Text) -> m ()
-addFileSimpleColumn colView columnTitle getText = do
+addFileSimpleColumn :: (MonadIO m) => Gtk.ColumnView -> T.Text -> (BMSFile -> T.Text) -> Bool -> m ()
+addFileSimpleColumn colView columnTitle getText expandable = do
   factory <- new Gtk.SignalListItemFactory []
 
   void $ on factory #setup $ \o -> do
     res <- runMaybeT $ do
       listItem <- MaybeT $ castTo Gtk.ListItem o
-      label <- new Gtk.Label [#selectable := True, #halign := Gtk.AlignStart]
+      label <-
+        new
+          Gtk.Label
+          [ #selectable := True
+          , #halign := Gtk.AlignStart
+          , #marginEnd := 5
+          , #marginStart := 2
+          , #marginBottom := 1
+          , #marginTop := 1
+          , #ellipsize := Pango.EllipsizeModeEnd
+          ]
       #setChild listItem (Just label)
     case res of
       Nothing -> putStrLn "initListItem failed"
@@ -319,7 +354,7 @@ addFileSimpleColumn colView columnTitle getText = do
       bmsFile <- liftIO $ gobjectGetPrivateData fileBMSWrapper
       let text = getText bmsFile
       set label [#label := text]
-      Gtk.widgetSetTooltipText label (Just (text))
+      Gtk.widgetSetTooltipText label (Just text)
     case res of
       Nothing -> putStrLn "bindListItem failed"
       Just () -> return ()
@@ -329,8 +364,9 @@ addFileSimpleColumn colView columnTitle getText = do
       Gtk.ColumnViewColumn
       [ #title := columnTitle
       , #factory := factory
-      , #expand := True
-      -- , #fixedWidth := 100
+      , #expand := expandable
+      , #resizable := True
+      , #fixedWidth := 300
       ]
 
   Gtk.columnViewAppendColumn colView column
@@ -359,7 +395,7 @@ addButtonColumn colView columnTitle getURL = do
       let uri = getURL bmsRecord
       unless (T.null uri) $ do
         set btn [#uri := uri, #label := "⬇"]
-        Gtk.widgetSetTooltipText btn (Just (uri))
+        Gtk.widgetSetTooltipText btn (Just uri)
     case res of
       Nothing -> putStrLn "bindListItem failed"
       Just () -> return ()
@@ -370,6 +406,35 @@ addButtonColumn colView columnTitle getURL = do
       [ #title := columnTitle
       , #factory := factory
       , #expand := False
+      , #resizable := True
+      , #fixedWidth := 70
+      ]
+
+  Gtk.columnViewAppendColumn colView column
+
+addToggleColumn :: (MonadIO m) => Gtk.ColumnView -> m ()
+addToggleColumn colView = do
+  factory <- new Gtk.SignalListItemFactory []
+
+  void $ on factory #setup $ \o -> do
+    res <- runMaybeT $ do
+      listItem <- MaybeT $ castTo Gtk.ListItem o
+      btn <- Gtk.checkButtonNewWithLabel (Just "Done")
+      #setChild listItem (Just btn)
+    case res of
+      Nothing -> putStrLn "initListItem failed"
+      Just () -> return ()
+
+  void $ on factory #bind $ \_ -> pure ()
+
+  column <-
+    new
+      Gtk.ColumnViewColumn
+      [ #title := "Check"
+      , #factory := factory
+      , #expand := False
+      , #resizable := True
+      , #fixedWidth := 120
       ]
 
   Gtk.columnViewAppendColumn colView column

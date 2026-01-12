@@ -19,7 +19,8 @@ import Data.GI.Base (
   TypedObject (..),
   glibType,
  )
-import Data.GI.Base.GObject (DerivedGObject (..), gobjectSetPrivateData, registerGType)
+import Data.GI.Base.GObject (DerivedGObject (..), gobjectGetPrivateData, gobjectInstallCStringProperty, gobjectSetPrivateData, registerGType)
+import Data.GI.Base.GParamSpec (CStringPropertyInfo (..))
 import Data.GI.Base.Overloading (HasParentTypes, ParentTypes)
 import Data.Text (Text)
 import GI.GObject (Object, new, toObject)
@@ -48,21 +49,12 @@ instance DerivedGObject MissingBMSWrapper where
 
   type GObjectPrivateData MissingBMSWrapper = MissingBMS
 
-  objectTypeName = "MyTypeObject"
+  objectTypeName = "MissingBMS"
 
   objectClassInit _ = pure ()
 
   objectInstanceInit _ _ =
-    pure $
-      MissingBMS
-        { source_table = ""
-        , level = ""
-        , artist = ""
-        , title = ""
-        , url = Nothing
-        , url_diff = Nothing
-        , comment = Nothing
-        }
+    pure $ MissingBMS "" "" "" "" Nothing Nothing Nothing
 
   objectInterfaces = []
 
@@ -94,19 +86,47 @@ instance DerivedGObject BMSFileWrapper where
 
   type GObjectPrivateData BMSFileWrapper = BMSFile
 
-  objectTypeName = "MyTypeObject"
+  objectTypeName = "BMSFile"
 
-  objectClassInit _ = pure ()
+  objectClassInit c = do
+    let
+      titleProperty :: CStringPropertyInfo BMSFileWrapper
+      titleProperty =
+        CStringPropertyInfo
+          { name = "title"
+          , nick = "File Title"
+          , blurb = "Title of BMS File"
+          , defaultValue = Nothing
+          , setter = (\_ _ -> return ())
+          , getter =
+              ( \o -> do
+                  bmsFile <- gobjectGetPrivateData o
+                  let t = fTitle bmsFile
+                  return (Just (t))
+              )
+          , flags = Nothing
+          }
+      artistProperty :: CStringPropertyInfo BMSFileWrapper
+      artistProperty =
+        CStringPropertyInfo
+          { name = "artist"
+          , nick = "File Artist"
+          , blurb = "Artist of BMS File"
+          , defaultValue = Nothing
+          , setter = (\_ _ -> return ())
+          , getter =
+              ( \o -> do
+                  bmsFile <- gobjectGetPrivateData o
+                  let t = fArtist bmsFile
+                  return (Just (t))
+              )
+          , flags = Nothing
+          }
+    gobjectInstallCStringProperty c titleProperty
+    gobjectInstallCStringProperty c artistProperty
 
   objectInstanceInit _ _ =
-    pure $
-      BMSFile
-        { fArtist = ""
-        , fTitle = ""
-        , fMd5 = Nothing
-        , fSha256 = Nothing
-        , filePath = ""
-        }
+    pure $ BMSFile "" "" Nothing Nothing ""
 
   objectInterfaces = []
 

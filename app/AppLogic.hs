@@ -4,37 +4,40 @@
 module AppLogic where
 
 import BMSFile (addBMSFiles, deleteBMSEntries, rebuildBMSFiles, renameBMSFolders)
+import Control.Monad (void)
 import Database.SQLite.Simple
 import FetchTable (getTables, processTables)
 import qualified GI.GLib as GLib
-import GI.Gio (ListStore, listStoreSplice)
-import Control.Monad (void)
+import GI.Gio (ListStore, listStoreRemoveAll, listStoreSplice)
 import PrettyPrint (showMissing)
 import Schema
 import TypeWrappers (toBMSFileWrapper)
 
-rebuildDatabase :: Config -> LogChan -> IO ()
-rebuildDatabase Config{..} logChan = do
+rebuildDatabase :: ListStore -> Config -> LogChan -> IO ()
+rebuildDatabase listStore c@Config{..} logChan = do
   writeLog logChan "Starting database rebuild..."
   conn <- open dbPath
   execute_ conn "DROP TABLE IF EXISTS bms_files"
   createFileTable conn
   rebuildBMSFiles bmsFolder conn
   writeLog logChan "Database rebuilt successfully"
+  showAllFiles listStore c
 
-addNewSongs :: Config -> LogChan -> IO ()
-addNewSongs Config{..} logChan = do
+addNewSongs :: ListStore -> Config -> LogChan -> IO ()
+addNewSongs listStore c@Config{..} logChan = do
   writeLog logChan "Adding new songs..."
   conn <- open dbPath
   addBMSFiles bmsFolder conn logChan
   writeLog logChan "New songs added successfully"
+  showAllFiles listStore c
 
-cleanDatabase :: Config -> LogChan -> IO ()
-cleanDatabase Config{..} logChan = do
+cleanDatabase :: ListStore -> Config -> LogChan -> IO ()
+cleanDatabase listStore c@Config{..} logChan = do
   writeLog logChan "Cleaning database..."
   conn <- open dbPath
   deleteBMSEntries conn
   writeLog logChan "Database cleaned successfully"
+  showAllFiles listStore c
 
 renameUncategorized :: Config -> LogChan -> IO ()
 renameUncategorized Config{..} logChan = do
@@ -76,6 +79,7 @@ showAllFiles listStore Config{..} = do
           <$> res
   bmsFilesWrapped <- toBMSFileWrapper bmsFiles
   void $ GLib.idleAdd GLib.PRIORITY_DEFAULT_IDLE $ do
+    listStoreRemoveAll listStore
     listStoreSplice listStore 0 0 bmsFilesWrapped
     return False
 

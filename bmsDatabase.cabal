@@ -76,6 +76,7 @@ executable bmsDatabase
     gi-glib,
     gi-gobject,
     gi-gtk4,
+    gi-pango,
     haskell-gi-base,
     http-conduit,
     sqlite-simple,
