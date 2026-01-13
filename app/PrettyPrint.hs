@@ -20,8 +20,8 @@ showMissing conn listStore = do
             MissingBMS source_table level artist title url url_diff comment
         )
           <$> res
-  mMissingRecords <- toMissingBMSWrapper missingRecords
+  missingRecordsWrappers <- toMissingBMSWrapper missingRecords
   void $ GLib.idleAdd GLib.PRIORITY_DEFAULT_IDLE $ do
     listStoreRemoveAll listStore
-    listStoreSplice listStore 0 0 mMissingRecords
+    listStoreSplice listStore 0 0 missingRecordsWrappers
     return False

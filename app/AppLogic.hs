@@ -81,7 +81,7 @@ showAllFiles listStore Config{..} = do
   void $ GLib.idleAdd GLib.PRIORITY_DEFAULT_IDLE $ do
     listStoreRemoveAll listStore
     listStoreSplice listStore 0 0 bmsFilesWrapped
-    return False
+    return GLib.SOURCE_REMOVE
 
 -- refreshDirectory :: Config -> FilePath -> IO Text
 -- refreshDirectory Config {..} songDirectory = do

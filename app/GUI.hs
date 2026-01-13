@@ -10,7 +10,7 @@ import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan (Chan, newChan, readChan, writeChan)
 import Control.Monad (forM_, forever, unless, void)
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.GI.Base
 import Data.GI.Base.GObject (gobjectGetPrivateData, registerGType)
 import Data.Maybe (fromMaybe)
@@ -141,8 +141,8 @@ activate app config logChan = do
   addMissingSimpleColumn missingColumnView "Artist" artist False
   addMissingSimpleColumn missingColumnView "Title" title True
 
-  addButtonColumn missingColumnView "URL" (fromMaybe "" . url)
-  addButtonColumn missingColumnView "Diff" (fromMaybe "" . url_diff)
+  addButtonColumn missingColumnView "URL" url
+  addButtonColumn missingColumnView "Diff" url_diff
   addToggleColumn missingColumnView
 
   addMissingSimpleColumn missingColumnView "Comment" (fromMaybe "" . comment) False
@@ -253,23 +253,25 @@ createLogArea = do
   return (textView, buffer)
 
 logUpdater :: Gtk.TextBuffer -> Gtk.TextView -> Chan LogMessage -> IO ()
-logUpdater buffer textView chan = forever $ do
-  msg <- readChan chan
-  case msg of
-    LogMessage text -> do
-      void $ GLib.idleAdd GLib.PRIORITY_DEFAULT_IDLE $ do
-        end <- Gtk.textBufferGetEndIter buffer
-        let logLine = text <> "\n"
-        Gtk.textBufferInsert buffer end logLine (-1)
-        mark <- Gtk.textBufferCreateMark buffer Nothing end True
-        Gtk.textViewScrollToMark textView mark 0 False 0 0
-        return False
-    ClearLog -> do
-      void $ GLib.idleAdd GLib.PRIORITY_DEFAULT_IDLE $ do
-        start <- Gtk.textBufferGetStartIter buffer
-        end <- Gtk.textBufferGetEndIter buffer
-        Gtk.textBufferDelete buffer start end
-        return False
+logUpdater buffer textView chan = do
+  e <- Gtk.textBufferGetEndIter buffer
+  mark <- Gtk.textBufferCreateMark buffer Nothing e False
+  forever $ do
+    msg <- readChan chan
+    case msg of
+      LogMessage text -> do
+        void $ GLib.idleAdd GLib.PRIORITY_DEFAULT_IDLE $ do
+          end <- Gtk.textBufferGetEndIter buffer
+          let logLine = text <> "\n"
+          Gtk.textBufferInsert buffer end logLine (-1)
+          Gtk.textViewScrollToMark textView mark 0 False 0 0
+          return GLib.SOURCE_REMOVE
+      ClearLog -> do
+        void $ GLib.idleAdd GLib.PRIORITY_DEFAULT_IDLE $ do
+          start <- Gtk.textBufferGetStartIter buffer
+          end <- Gtk.textBufferGetEndIter buffer
+          Gtk.textBufferDelete buffer start end
+          return GLib.SOURCE_REMOVE
 
 addMissingSimpleColumn :: (MonadIO m) => Gtk.ColumnView -> T.Text -> (MissingBMS -> T.Text) -> Bool -> m ()
 addMissingSimpleColumn colView columnTitle getText expandable = do
@@ -353,8 +355,7 @@ addFileSimpleColumn colView columnTitle getText expandable = do
       label <- MaybeT $ castTo Gtk.Label widget
       bmsFile <- liftIO $ gobjectGetPrivateData fileBMSWrapper
       let text = getText bmsFile
-      set label [#label := text]
-      Gtk.widgetSetTooltipText label (Just text)
+      set label [#label := text, #tooltipText := text]
     case res of
       Nothing -> putStrLn "bindListItem failed"
       Just () -> return ()
@@ -371,7 +372,7 @@ addFileSimpleColumn colView columnTitle getText expandable = do
 
   Gtk.columnViewAppendColumn colView column
 
-addButtonColumn :: (MonadIO m) => Gtk.ColumnView -> T.Text -> (MissingBMS -> T.Text) -> m ()
+addButtonColumn :: (MonadIO m) => Gtk.ColumnView -> T.Text -> (MissingBMS -> Maybe T.Text) -> m ()
 addButtonColumn colView columnTitle getURL = do
   factory <- new Gtk.SignalListItemFactory []
 
@@ -392,10 +393,8 @@ addButtonColumn colView columnTitle getURL = do
       widget <- MaybeT $ #getChild listItem
       btn <- MaybeT $ castTo Gtk.LinkButton widget
       bmsRecord <- liftIO $ gobjectGetPrivateData missingBMSWrapper
-      let uri = getURL bmsRecord
-      unless (T.null uri) $ do
-        set btn [#uri := uri, #label := "⬇"]
-        Gtk.widgetSetTooltipText btn (Just uri)
+      uri <- MaybeT $ pure $ getURL bmsRecord
+      set btn [#uri := uri, #label := "⬇", #tooltipText := uri]
     case res of
       Nothing -> putStrLn "bindListItem failed"
       Just () -> return ()

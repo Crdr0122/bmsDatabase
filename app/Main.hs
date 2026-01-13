@@ -1,5 +1,3 @@
-{-# LANGUAGE ImplicitParams #-}
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -8,9 +6,9 @@ module Main where
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.Text (unpack)
-import GUI
-import Network.HTTP.Simple
-import Schema
+import GUI (startApp)
+import Network.HTTP.Simple (parseRequest_)
+import Schema (Config (..), ConfigFile (..), DifficultyTable (..))
 import System.Directory (XdgDirectory (..), getXdgDirectory)
 
 main :: IO ()
@@ -33,4 +31,4 @@ main = do
           , tablesFolder = xdgDataDir <> "tables/"
           , difficultyTables = t
           }
-  GUI.startApp config
+  startApp config
