@@ -6,18 +6,17 @@ module GUI (startApp) where
 import AppLogic
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan (Chan, newChan, readChan, writeChan)
-import Control.Monad (forM_, forever, void)
+import Control.Monad (forM_, forever, void, (>=>))
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Maybe (MaybeT (..))
+import Control.Monad.Trans.Maybe (MaybeT (..), hoistMaybe)
 import Data.GI.Base
 import Data.GI.Base.GObject (gobjectGetPrivateData, registerGType)
 import Data.Maybe (fromMaybe)
 import Data.Text qualified as T
-import GI.GLib qualified as GLib
 import GI.Gio qualified as Gio
 import GI.Gtk qualified as Gtk
 import GI.Pango qualified as Pango
-import Schema (BMSFile (..), Config (bmsFolder), LogMessage (..))
+import Schema (BMSFile (..), Config (bmsFolder), LogMessage (..), threadUpdateMain)
 import TypeWrappers (BMSFileWrapper (..), MissingBMS (..), MissingBMSWrapper (..))
 
 startApp :: Config -> IO ()
@@ -66,13 +65,7 @@ activate app config logChan = do
       ]
 
   forM_ buttons $ \(buttonLabel, action) -> do
-    button <-
-      new
-        Gtk.Button
-        [ #label := buttonLabel
-        , On #clicked (void $ forkIO $ action config logChan)
-        ]
-    #append buttonBox button
+    new Gtk.Button [#label := buttonLabel, On #clicked (void $ forkIO $ action config logChan)] >>= #append buttonBox
 
   consoleBox <-
     new
@@ -119,6 +112,7 @@ activate app config logChan = do
       Gtk.SingleSelection
       [ #model := missingListStore
       ]
+
   missingColumnView <-
     new
       Gtk.ColumnView
@@ -147,9 +141,8 @@ activate app config logChan = do
   addMissingSimpleColumn missingColumnView "Table" source_table False
   addMissingSimpleColumn missingColumnView "Level" level False
 
-  let customFileFilterFunc o = do
-        maybeWrapper <- castTo BMSFileWrapper o
-        case maybeWrapper of
+  let customFileFilterFunc =
+        castTo BMSFileWrapper >=> \case
           Nothing -> pure False
           Just wrapper -> do
             priv <- gobjectGetPrivateData wrapper
@@ -187,9 +180,10 @@ activate app config logChan = do
       , #widthRequest := 200
       ]
 
-  let len = length $ bmsFolder config
   addFileSimpleColumn fileColumnView "Artist" fArtist False
   addFileSimpleColumn fileColumnView "Title" fTitle False
+
+  let len = length $ bmsFolder config
   addFileSimpleColumn fileColumnView "Path" (T.drop len . filePath) True
 
   bottomBox <-
@@ -255,23 +249,17 @@ logUpdater buffer textView chan = do
   e <- Gtk.textBufferGetEndIter buffer
   mark <- Gtk.textBufferCreateMark buffer Nothing e False
   forever $ do
-    msg <- readChan chan
-    case msg of
-      LogMessage text -> do
-        void $ GLib.idleAdd GLib.PRIORITY_DEFAULT_IDLE $ do
-          end <- Gtk.textBufferGetEndIter buffer
-          let logLine = text <> "\n"
-          Gtk.textBufferInsert buffer end logLine (-1)
-          Gtk.textViewScrollToMark textView mark 0 False 0 0
-          return GLib.SOURCE_REMOVE
-      ClearLog -> do
-        void $ GLib.idleAdd GLib.PRIORITY_DEFAULT_IDLE $ do
-          start <- Gtk.textBufferGetStartIter buffer
-          end <- Gtk.textBufferGetEndIter buffer
-          Gtk.textBufferDelete buffer start end
-          return GLib.SOURCE_REMOVE
+    readChan chan >>= \case
+      LogMessage text -> threadUpdateMain $ do
+        endIter <- Gtk.textBufferGetEndIter buffer
+        Gtk.textBufferInsert buffer endIter (text <> "\n") (-1)
+        Gtk.textViewScrollToMark textView mark 0 False 0 0
+      ClearLog -> threadUpdateMain $ do
+        start <- Gtk.textBufferGetStartIter buffer
+        end <- Gtk.textBufferGetEndIter buffer
+        Gtk.textBufferDelete buffer start end
 
-addMissingSimpleColumn :: (MonadIO m) => Gtk.ColumnView -> T.Text -> (MissingBMS -> T.Text) -> Bool -> m ()
+addMissingSimpleColumn :: Gtk.ColumnView -> T.Text -> (MissingBMS -> T.Text) -> Bool -> IO ()
 addMissingSimpleColumn colView columnTitle getText expandable = do
   factory <- new Gtk.SignalListItemFactory []
 
@@ -321,7 +309,7 @@ addMissingSimpleColumn colView columnTitle getText expandable = do
 
   Gtk.columnViewAppendColumn colView column
 
-addFileSimpleColumn :: (MonadIO m) => Gtk.ColumnView -> T.Text -> (BMSFile -> T.Text) -> Bool -> m ()
+addFileSimpleColumn :: Gtk.ColumnView -> T.Text -> (BMSFile -> T.Text) -> Bool -> IO ()
 addFileSimpleColumn colView columnTitle getText expandable = do
   factory <- new Gtk.SignalListItemFactory []
 
@@ -370,7 +358,7 @@ addFileSimpleColumn colView columnTitle getText expandable = do
 
   Gtk.columnViewAppendColumn colView column
 
-addButtonColumn :: (MonadIO m) => Gtk.ColumnView -> T.Text -> (MissingBMS -> Maybe T.Text) -> m ()
+addButtonColumn :: Gtk.ColumnView -> T.Text -> (MissingBMS -> Maybe T.Text) -> IO ()
 addButtonColumn colView columnTitle getURL = do
   factory <- new Gtk.SignalListItemFactory []
 
@@ -391,7 +379,7 @@ addButtonColumn colView columnTitle getURL = do
       widget <- MaybeT $ #getChild listItem
       btn <- MaybeT $ castTo Gtk.LinkButton widget
       bmsRecord <- liftIO $ gobjectGetPrivateData missingBMSWrapper
-      uri <- MaybeT $ pure $ getURL bmsRecord
+      uri <- hoistMaybe $ getURL bmsRecord
       set btn [#uri := uri, #label := "⬇", #tooltipText := uri]
     case res of
       Nothing -> putStrLn "bindListItem failed"
@@ -409,14 +397,14 @@ addButtonColumn colView columnTitle getURL = do
 
   Gtk.columnViewAppendColumn colView column
 
-addToggleColumn :: (MonadIO m) => Gtk.ColumnView -> m ()
+addToggleColumn :: Gtk.ColumnView -> IO ()
 addToggleColumn colView = do
   factory <- new Gtk.SignalListItemFactory []
 
   void $ on factory #setup $ \o -> do
     res <- runMaybeT $ do
       listItem <- MaybeT $ castTo Gtk.ListItem o
-      btn <- Gtk.checkButtonNewWithLabel (Just "Done")
+      btn <- new Gtk.CheckButton [#label := "Done"]
       #setChild listItem (Just btn)
     case res of
       Nothing -> putStrLn "initListItem failed"

@@ -11,6 +11,7 @@ module TypeWrappers (
   toBMSFileWrapper,
 ) where
 
+import Control.Monad ((>=>))
 import Control.Monad.IO.Class
 import Data.GI.Base (
   GObject,
@@ -65,8 +66,7 @@ newMissingBMSWrapper :: (MonadIO m) => MissingBMS -> m Object
 newMissingBMSWrapper record = liftIO $ do
   wrapper <- new MissingBMSWrapper []
   gobjectSetPrivateData wrapper record
-  o <- toObject wrapper
-  pure o
+  toObject wrapper >>= return
 
 toMissingBMSWrapper :: (MonadIO m) => [MissingBMS] -> m [Object]
 toMissingBMSWrapper = mapM newMissingBMSWrapper
@@ -97,12 +97,7 @@ instance DerivedGObject BMSFileWrapper where
           , blurb = "Title of BMS File"
           , defaultValue = Nothing
           , setter = (\_ _ -> return ())
-          , getter =
-              ( \o -> do
-                  bmsFile <- gobjectGetPrivateData o
-                  let t = fTitle bmsFile
-                  return (Just (t))
-              )
+          , getter = gobjectGetPrivateData >=> pure . Just . fTitle
           , flags = Nothing
           }
       artistProperty :: CStringPropertyInfo BMSFileWrapper
@@ -113,12 +108,7 @@ instance DerivedGObject BMSFileWrapper where
           , blurb = "Artist of BMS File"
           , defaultValue = Nothing
           , setter = (\_ _ -> return ())
-          , getter =
-              ( \o -> do
-                  bmsFile <- gobjectGetPrivateData o
-                  let t = fArtist bmsFile
-                  return (Just (t))
-              )
+          , getter = gobjectGetPrivateData >=> pure . Just . fArtist
           , flags = Nothing
           }
     gobjectInstallCStringProperty c titleProperty
@@ -137,8 +127,9 @@ newBMSFileWrapper :: (MonadIO m) => BMSFile -> m Object
 newBMSFileWrapper file = liftIO $ do
   wrapper <- new BMSFileWrapper []
   gobjectSetPrivateData wrapper file
-  o <- toObject wrapper
-  pure o
+  toObject wrapper >>= return
 
 toBMSFileWrapper :: (MonadIO m) => [BMSFile] -> m [Object]
 toBMSFileWrapper = mapM newBMSFileWrapper
+
+

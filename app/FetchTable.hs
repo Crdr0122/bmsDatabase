@@ -8,7 +8,7 @@ import Data.Aeson
 import Data.ByteString.Lazy qualified as LB
 import Data.ByteString.Lazy.Char8 qualified as L8
 import Database.SQLite.Simple
-import Network.HTTP.Simple
+import Network.HTTP.Simple (Request, getResponseBody, getResponseStatusCode, httpLBS)
 import Schema (BMSRecord, LogChan, createRecordTable, insertRecord, writeLog)
 
 getTables :: [(FilePath, Request)] -> FilePath -> LogChan -> IO ()
@@ -20,7 +20,6 @@ getTable tableFolder logChan (n, url) = do
   case getResponseStatusCode response of
     200 -> do
       L8.writeFile (tableFolder <> n <> ".json") $ getResponseBody response
-      -- putStrLn ("Updated " <> n)
       writeLog logChan ("Updated " <> n)
     err -> writeLog logChan $ "Error for " ++ n ++ ": " ++ show err
 
@@ -39,9 +38,8 @@ processTables conn tableFolder filePaths logChan = do
 
 processTable :: Connection -> FilePath -> LogChan -> FilePath -> IO ()
 processTable conn tableFolder logChan tableFile = do
-  result <- readBMSRecords tableFile
   let tableName = takeWhile (/= '.') $ drop (length tableFolder) tableFile
-  case result of
+  readBMSRecords tableFile >>= \case
     Left err -> writeLog logChan $ "Error parsing JSON file " ++ tableFile ++ ": " ++ err
     Right records -> do
       mapM_ (insertRecord conn tableName) records

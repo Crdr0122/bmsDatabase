@@ -15,24 +15,25 @@ module Schema (
   createRecordTable,
   writeLog,
   createFileTable,
+  threadUpdateMain,
 )
 where
 
 import Control.Concurrent.Chan (Chan, writeChan)
+import Control.Monad (void)
 import Data.Aeson
-import Data.Text qualified as T
 import Data.Text (Text)
+import Data.Text qualified as T
 import Database.SQLite.Simple
+import GI.GLib qualified as GLib
 import Network.HTTP.Simple
 
-data LogMessage
-  = LogMessage T.Text -- Text to display
-  | ClearLog
+data LogMessage = LogMessage T.Text | ClearLog
 
 type LogChan = Chan LogMessage
 
 writeLog :: LogChan -> String -> IO ()
-writeLog chan msg = writeChan chan (LogMessage (T.pack msg))
+writeLog chan = writeChan chan . LogMessage . T.pack
 
 data Config = Config
   { bmsFolder :: FilePath
@@ -117,7 +118,7 @@ insertRecord conn sourceTable BMSRecord{..} =
     "INSERT INTO bms_records (source_table, artist, level, title, url, url_diff, comment, md5, sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     (sourceTable, artist, level, title, url, url_diff, comment, md5, sha256)
 
-insertBMSFile :: Connection -> String -> BMSFile -> IO ()
+insertBMSFile :: Connection -> FilePath -> BMSFile -> IO ()
 insertBMSFile conn fp BMSFile{..} =
   execute
     conn
@@ -133,7 +134,7 @@ commonPrefix (x : xs) = foldl' pre x xs
     Just (p, _, _) -> p
 
 normalizeTitle :: [Text] -> String
-normalizeTitle x = T.unpack $ foldl' (\n (from, to) -> T.replace from to n) (T.strip $ commonPrefix x) illegalCharacters
+normalizeTitle = T.unpack . flip (foldl' (\n (from, to) -> T.replace from to n)) illegalCharacters . T.strip . commonPrefix
  where
   illegalCharacters =
     [ ("/", "／")
@@ -146,3 +147,9 @@ normalizeTitle x = T.unpack $ foldl' (\n (from, to) -> T.replace from to n) (T.s
     , ("|", "｜")
     , ("\"", "＂")
     ]
+
+threadUpdateMain :: IO () -> IO ()
+threadUpdateMain action =
+  void $ GLib.idleAdd GLib.PRIORITY_DEFAULT_IDLE $ do
+    action
+    return GLib.SOURCE_REMOVE

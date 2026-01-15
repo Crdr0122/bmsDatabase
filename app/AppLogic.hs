@@ -1,10 +1,17 @@
-module AppLogic where
+module AppLogic (
+  rebuildDatabase,
+  addNewSongs,
+  cleanDatabase,
+  renameUncategorized,
+  fetchTables,
+  loadTables,
+  showMissingFiles,
+  showAllFiles,
+) where
 
 import BMSFile (addBMSFiles, deleteBMSEntries, rebuildBMSFiles, renameBMSFolders)
-import Control.Monad (void)
 import Database.SQLite.Simple
 import FetchTable (getTables, processTables)
-import GI.GLib qualified as GLib
 import GI.Gio (ListStore, listStoreRemoveAll, listStoreSplice)
 import PrettyPrint (showMissing)
 import Schema
@@ -75,17 +82,6 @@ showAllFiles listStore Config{dbPath} = do
         )
           <$> res
   bmsFilesWrapped <- toBMSFileWrapper bmsFiles
-  void $ GLib.idleAdd GLib.PRIORITY_DEFAULT_IDLE $ do
+  threadUpdateMain $ do
     listStoreRemoveAll listStore
     listStoreSplice listStore 0 0 bmsFilesWrapped
-    return GLib.SOURCE_REMOVE
-
--- refreshDirectory :: Config -> FilePath -> IO Text
--- refreshDirectory Config {..} songDirectory = do
---   conn <- open dbPath
---   entries <- listDirectory songDirectory
---   let fullPaths = map (songDirectory </>) entries
---       bmsFiles = [f | f <- fullPaths, takeExtension f `elem` validExts]
---   mapM_ (processBMSFileIfExist conn) bmsFiles
---   close conn
---   return $ pack $ "Refreshed directory: " ++ songDirectory

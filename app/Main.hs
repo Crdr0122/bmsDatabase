@@ -10,11 +10,10 @@ import System.Directory (XdgDirectory (..), getXdgDirectory)
 
 main :: IO ()
 main = do
-  configFile <- getXdgDirectory XdgConfig "bmsDatabase/config.json"
-  configByteString <- BL.readFile configFile
+  configByteString <- getXdgDirectory XdgConfig "bmsDatabase/config.json" >>= BL.readFile
   (bmsFiles, t) <- case eitherDecode configByteString of
     Left err -> do
-      putStrLn $ "Error parsing config file: " ++ err
+      putStrLn $ "Error parsing config file: " <> err
       error "Wrong Config"
     Right ConfigFile{configFileTables, actualBMSData} -> do
       let t = map (\DifficultyTable{tableName, tableUrl} -> (unpack tableName, parseRequest_ (unpack tableUrl))) configFileTables
