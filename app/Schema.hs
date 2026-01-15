@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Schema (
@@ -21,8 +20,8 @@ where
 
 import Control.Concurrent.Chan (Chan, writeChan)
 import Data.Aeson
+import Data.Text qualified as T
 import Data.Text (Text)
-import qualified Data.Text as T
 import Database.SQLite.Simple
 import Network.HTTP.Simple
 
@@ -126,9 +125,10 @@ insertBMSFile conn fp BMSFile{..} =
     (fp, fArtist, fTitle, fMd5, fSha256)
 
 commonPrefix :: [Text] -> Text
-commonPrefix = foldl1 pre
+commonPrefix [] = ""
+commonPrefix (x : xs) = foldl' pre x xs
  where
-  pre x y = case T.commonPrefixes x y of
+  pre a b = case T.commonPrefixes a b of
     Nothing -> ""
     Just (p, _, _) -> p
 
@@ -146,5 +146,3 @@ normalizeTitle x = T.unpack $ foldl' (\n (from, to) -> T.replace from to n) (T.s
     , ("|", "｜")
     , ("\"", "＂")
     ]
-
-

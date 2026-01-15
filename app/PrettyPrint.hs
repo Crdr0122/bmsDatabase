@@ -1,10 +1,8 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module PrettyPrint (showMissing) where
 
 import Control.Monad (void)
 import Database.SQLite.Simple
-import qualified GI.GLib as GLib
+import GI.GLib qualified as GLib
 import GI.Gio (ListStore, listStoreRemoveAll, listStoreSplice)
 import TypeWrappers (MissingBMS (MissingBMS), toMissingBMSWrapper)
 

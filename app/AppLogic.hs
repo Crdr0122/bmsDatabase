@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module AppLogic where
@@ -7,7 +6,7 @@ import BMSFile (addBMSFiles, deleteBMSEntries, rebuildBMSFiles, renameBMSFolders
 import Control.Monad (void)
 import Database.SQLite.Simple
 import FetchTable (getTables, processTables)
-import qualified GI.GLib as GLib
+import GI.GLib qualified as GLib
 import GI.Gio (ListStore, listStoreRemoveAll, listStoreSplice)
 import PrettyPrint (showMissing)
 import Schema

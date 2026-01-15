@@ -1,24 +1,22 @@
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 module GUI (startApp) where
 
 import AppLogic
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan (Chan, newChan, readChan, writeChan)
-import Control.Monad (forM_, forever, unless, void)
+import Control.Monad (forM_, forever, void)
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.GI.Base
 import Data.GI.Base.GObject (gobjectGetPrivateData, registerGType)
 import Data.Maybe (fromMaybe)
-import qualified Data.Text as T
-import qualified GI.GLib as GLib
-import qualified GI.Gio as Gio
-import qualified GI.Gtk as Gtk
-import qualified GI.Pango as Pango
+import Data.Text qualified as T
+import GI.GLib qualified as GLib
+import GI.Gio qualified as Gio
+import GI.Gtk qualified as Gtk
+import GI.Pango qualified as Pango
 import Schema (BMSFile (..), Config (bmsFolder), LogMessage (..))
 import TypeWrappers (BMSFileWrapper (..), MissingBMS (..), MissingBMSWrapper (..))
 

@@ -1,14 +1,12 @@
-{-# LANGUAGE OverloadedStrings #-}
-
-module FetchTable
-  ( getTables,
-    processTables,
-  )
+module FetchTable (
+  getTables,
+  processTables,
+)
 where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as B
-import qualified Data.ByteString.Lazy.Char8 as L8
+import Data.ByteString.Lazy qualified as B
+import Data.ByteString.Lazy.Char8 qualified as L8
 import Database.SQLite.Simple
 import Network.HTTP.Simple
 import Schema (BMSRecord, LogChan, createRecordTable, insertRecord, writeLog)

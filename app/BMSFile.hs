@@ -1,33 +1,31 @@
-{-# LANGUAGE OverloadedStrings #-}
-
-module BMSFile
-  ( addBMSFiles,
-    deleteBMSEntries,
-    processBMSFileIfExist,
-    rebuildBMSFiles,
-    renameBMSFolders,
-  )
+module BMSFile (
+  addBMSFiles,
+  deleteBMSEntries,
+  processBMSFileIfExist,
+  rebuildBMSFiles,
+  renameBMSFolders,
+)
 where
 
 import Control.Monad (filterM, when)
-import qualified Crypto.Hash.MD5 as MD5
-import qualified Crypto.Hash.SHA256 as SHA256
+import Crypto.Hash.MD5 qualified as MD5
+import Crypto.Hash.SHA256 qualified as SHA256
 import Data.Aeson
-import qualified Data.ByteString as B
+import Data.ByteString qualified as B
 import Data.ByteString.Base16 as B16 (encode)
-import qualified Data.ByteString.Lazy as BL
+import Data.ByteString.Lazy qualified as BL
 import Data.List (find, isSuffixOf)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Text.Encoding (decodeUtf8)
-import qualified Data.Text.ICU.Convert as ICU
+import Data.Text.ICU.Convert qualified as ICU
 import Database.SQLite.Simple
 import Schema (BMSFile (..), LogChan, insertBMSFile, normalizeTitle, validExts, writeLog)
 import System.Directory (doesDirectoryExist, doesFileExist, listDirectory, renameDirectory)
 import System.FilePath (takeExtension, (</>))
 
 data BMSON = BMSON
-  { bmsonTitle :: T.Text,
-    bmsonArtist :: T.Text
+  { bmsonTitle :: T.Text
+  , bmsonArtist :: T.Text
   }
   deriving (Show)
 
@@ -57,49 +55,49 @@ rebuildBMSFiles rootDir conn = do
   packs <- getSubdirectories rootDir
   mapM_ getFilesFromSubdirs packs
   close conn
-  where
-    getSubdirectories :: FilePath -> IO [FilePath]
-    getSubdirectories dir = do
-      entries <- listDirectory dir
-      let fullPaths = map (dir </>) entries
-      filterM doesDirectoryExist fullPaths
+ where
+  getSubdirectories :: FilePath -> IO [FilePath]
+  getSubdirectories dir = do
+    entries <- listDirectory dir
+    let fullPaths = map (dir </>) entries
+    filterM doesDirectoryExist fullPaths
 
-    getFilesFromSubdirs :: FilePath -> IO ()
-    getFilesFromSubdirs dir = do
-      subdirs <- getSubdirectories dir
-      mapM_ insertFiles subdirs
+  getFilesFromSubdirs :: FilePath -> IO ()
+  getFilesFromSubdirs dir = do
+    subdirs <- getSubdirectories dir
+    mapM_ insertFiles subdirs
 
-    insertFiles :: FilePath -> IO ()
-    insertFiles dir = do
-      putStrLn dir
-      entries <- listDirectory dir
-      let fullPaths = map (dir </>) entries
-          bmsFiles = [f | f <- fullPaths, takeExtension f `elem` validExts]
-      mapM_ (processBMSFile conn) bmsFiles
+  insertFiles :: FilePath -> IO ()
+  insertFiles dir = do
+    putStrLn dir
+    entries <- listDirectory dir
+    let fullPaths = map (dir </>) entries
+        bmsFiles = [f | f <- fullPaths, takeExtension f `elem` validExts]
+    mapM_ (processBMSFile conn) bmsFiles
 
 addBMSFiles :: FilePath -> Connection -> LogChan -> IO ()
 addBMSFiles rootDir conn logChan = do
   packs <- getSubdirectories rootDir
   mapM_ getFilesFromSubdirs packs
   close conn
-  where
-    getSubdirectories :: FilePath -> IO [FilePath]
-    getSubdirectories dir = do
-      entries <- listDirectory dir
-      let fullPaths = map (dir </>) entries
-      filterM doesDirectoryExist fullPaths
+ where
+  getSubdirectories :: FilePath -> IO [FilePath]
+  getSubdirectories dir = do
+    entries <- listDirectory dir
+    let fullPaths = map (dir </>) entries
+    filterM doesDirectoryExist fullPaths
 
-    getFilesFromSubdirs :: FilePath -> IO ()
-    getFilesFromSubdirs dir = do
-      subdirs <- getSubdirectories dir
-      mapM_ insertFiles subdirs
+  getFilesFromSubdirs :: FilePath -> IO ()
+  getFilesFromSubdirs dir = do
+    subdirs <- getSubdirectories dir
+    mapM_ insertFiles subdirs
 
-    insertFiles :: FilePath -> IO ()
-    insertFiles dir = do
-      entries <- listDirectory dir
-      let fullPaths = map (dir </>) entries
-          bmsFiles = [f | f <- fullPaths, takeExtension f `elem` validExts]
-      mapM_ (processBMSFileIfExist conn logChan) bmsFiles
+  insertFiles :: FilePath -> IO ()
+  insertFiles dir = do
+    entries <- listDirectory dir
+    let fullPaths = map (dir </>) entries
+        bmsFiles = [f | f <- fullPaths, takeExtension f `elem` validExts]
+    mapM_ (processBMSFileIfExist conn logChan) bmsFiles
 
 processBMSFileIfExist :: Connection -> LogChan -> FilePath -> IO ()
 processBMSFileIfExist conn logChan f = do
@@ -108,11 +106,11 @@ processBMSFileIfExist conn logChan f = do
     bms <- processBMS f
     insertBMSFile conn f bms
     writeLog logChan $ "Added " <> f
-  where
-    fileNotExistInDb :: FilePath -> IO Bool
-    fileNotExistInDb file = do
-      res <- query conn "SELECT 1 FROM bms_files WHERE file_path = ?" (Only file) :: IO [Only Int]
-      return $ null res
+ where
+  fileNotExistInDb :: FilePath -> IO Bool
+  fileNotExistInDb file = do
+    res <- query conn "SELECT 1 FROM bms_files WHERE file_path = ?" (Only file) :: IO [Only Int]
+    return $ null res
 
 renameBMSFolders :: FilePath -> IO ()
 renameBMSFolders dir = do
@@ -150,11 +148,11 @@ parseBMS file = do
         Nothing -> ""
   return
     BMSFile
-      { fArtist = remove "#ARTIST " 8,
-        fTitle = remove "#TITLE " 7,
-        fMd5 = Just $ decodeUtf8 $ B16.encode digest,
-        fSha256 = Nothing,
-        filePath = T.pack file
+      { fArtist = remove "#ARTIST " 8
+      , fTitle = remove "#TITLE " 7
+      , fMd5 = Just $ decodeUtf8 $ B16.encode digest
+      , fSha256 = Nothing
+      , filePath = T.pack file
       }
 
 parseBMSON :: FilePath -> IO BMSFile
@@ -165,15 +163,15 @@ parseBMSON file = do
   case eitherDecode bytestring of
     Left err -> do
       putStrLn $ "Error parsing BMSON file " ++ file ++ ": " ++ err
-      return BMSFile {fArtist = "", fTitle = "", fMd5 = Nothing, fSha256 = Nothing, filePath = ""}
-    Right BMSONFile {info = BMSON {bmsonArtist = a, bmsonTitle = t}} ->
+      return BMSFile{fArtist = "", fTitle = "", fMd5 = Nothing, fSha256 = Nothing, filePath = ""}
+    Right BMSONFile{info = BMSON{bmsonArtist = a, bmsonTitle = t}} ->
       return
         BMSFile
-          { fArtist = a,
-            fTitle = t,
-            fMd5 = Nothing,
-            fSha256 = Just $ decodeUtf8 $ B16.encode digest,
-            filePath = T.pack file
+          { fArtist = a
+          , fTitle = t
+          , fMd5 = Nothing
+          , fSha256 = Just $ decodeUtf8 $ B16.encode digest
+          , filePath = T.pack file
           }
 
 shiftJISToUTF8 :: B.ByteString -> IO T.Text

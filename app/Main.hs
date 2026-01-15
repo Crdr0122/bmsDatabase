@@ -1,10 +1,9 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Main where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BL
+import Data.ByteString.Lazy qualified as BL
 import Data.Text (unpack)
 import GUI (startApp)
 import Network.HTTP.Simple (parseRequest_)
