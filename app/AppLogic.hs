@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module AppLogic where
 
 import BMSFile (addBMSFiles, deleteBMSEntries, rebuildBMSFiles, renameBMSFolders)
@@ -13,7 +11,7 @@ import Schema
 import TypeWrappers (toBMSFileWrapper)
 
 rebuildDatabase :: ListStore -> Config -> LogChan -> IO ()
-rebuildDatabase listStore c@Config{..} logChan = do
+rebuildDatabase listStore c@Config{dbPath, bmsFolder} logChan = do
   writeLog logChan "Starting database rebuild..."
   conn <- open dbPath
   execute_ conn "DROP TABLE IF EXISTS bms_files"
@@ -23,7 +21,7 @@ rebuildDatabase listStore c@Config{..} logChan = do
   showAllFiles listStore c
 
 addNewSongs :: ListStore -> Config -> LogChan -> IO ()
-addNewSongs listStore c@Config{..} logChan = do
+addNewSongs listStore c@Config{dbPath, bmsFolder} logChan = do
   writeLog logChan "Adding new songs..."
   conn <- open dbPath
   addBMSFiles bmsFolder conn logChan
@@ -31,7 +29,7 @@ addNewSongs listStore c@Config{..} logChan = do
   showAllFiles listStore c
 
 cleanDatabase :: ListStore -> Config -> LogChan -> IO ()
-cleanDatabase listStore c@Config{..} logChan = do
+cleanDatabase listStore c@Config{dbPath} logChan = do
   writeLog logChan "Cleaning database..."
   conn <- open dbPath
   deleteBMSEntries conn
@@ -39,26 +37,26 @@ cleanDatabase listStore c@Config{..} logChan = do
   showAllFiles listStore c
 
 renameUncategorized :: Config -> LogChan -> IO ()
-renameUncategorized Config{..} logChan = do
+renameUncategorized Config{bmsFolder} logChan = do
   writeLog logChan "Renaming uncategorized folders..."
   renameBMSFolders (bmsFolder <> "Uncategorized/")
   writeLog logChan "Uncategorized songs renamed successfully"
 
 showMissingFiles :: ListStore -> Config -> LogChan -> IO ()
-showMissingFiles listStore Config{..} logChan = do
+showMissingFiles listStore Config{dbPath} logChan = do
   writeLog logChan "Finding missing files..."
   conn <- open dbPath
   showMissing conn listStore
   writeLog logChan "Missing files found"
 
 fetchTables :: Config -> LogChan -> IO ()
-fetchTables Config{..} logChan = do
+fetchTables Config{difficultyTables, tablesFolder} logChan = do
   writeLog logChan "Fetching tables..."
   getTables difficultyTables tablesFolder logChan
   writeLog logChan "Tables fetched successfully"
 
 loadTables :: Config -> LogChan -> IO ()
-loadTables Config{..} logChan = do
+loadTables Config{dbPath, difficultyTables, tablesFolder} logChan = do
   writeLog logChan "Loading tables into database..."
   conn <- open dbPath
   let jsonFiles = (<> ".json") . (tablesFolder <>) . fst <$> difficultyTables
@@ -66,7 +64,7 @@ loadTables Config{..} logChan = do
   writeLog logChan "Tables loaded successfully"
 
 showAllFiles :: ListStore -> Config -> IO ()
-showAllFiles listStore Config{..} = do
+showAllFiles listStore Config{dbPath} = do
   conn <- open dbPath
   createRecordTable conn
   res <- query_ conn "SELECT artist, title, file_path FROM bms_files"

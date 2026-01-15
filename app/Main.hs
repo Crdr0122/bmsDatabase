@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Main where
 
 import Data.Aeson
@@ -18,8 +16,8 @@ main = do
     Left err -> do
       putStrLn $ "Error parsing config file: " ++ err
       error "Wrong Config"
-    Right ConfigFile{..} -> do
-      let t = map (\DifficultyTable{..} -> (unpack tableName, parseRequest_ (unpack tableUrl))) configFileTables
+    Right ConfigFile{configFileTables, actualBMSData} -> do
+      let t = map (\DifficultyTable{tableName, tableUrl} -> (unpack tableName, parseRequest_ (unpack tableUrl))) configFileTables
       return (unpack actualBMSData, t)
 
   xdgDataDir <- getXdgDirectory XdgData "bmsDatabase/"

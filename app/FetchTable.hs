@@ -5,7 +5,7 @@ module FetchTable (
 where
 
 import Data.Aeson
-import Data.ByteString.Lazy qualified as B
+import Data.ByteString.Lazy qualified as LB
 import Data.ByteString.Lazy.Char8 qualified as L8
 import Database.SQLite.Simple
 import Network.HTTP.Simple
@@ -26,7 +26,7 @@ getTable tableFolder logChan (n, url) = do
 
 readBMSRecords :: FilePath -> IO (Either String [BMSRecord])
 readBMSRecords f = do
-  jsonData <- B.readFile f
+  jsonData <- LB.readFile f
   return $ eitherDecode jsonData
 
 processTables :: Connection -> FilePath -> [FilePath] -> LogChan -> IO ()

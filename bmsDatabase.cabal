@@ -61,7 +61,7 @@ executable bmsDatabase
 
   default-extensions:
     OverloadedStrings
-    RecordWildCards
+    NamedFieldPuns
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
