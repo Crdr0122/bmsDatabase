@@ -228,7 +228,7 @@ activate app config logChan = do
   void $ forkIO $ showAllFiles fileListStore config
 
   #show window
-  return ()
+  pure ()
 
 createLogArea :: IO (Gtk.TextView, Gtk.TextBuffer)
 createLogArea = do
@@ -242,7 +242,7 @@ createLogArea = do
       ]
 
   buffer <- Gtk.textViewGetBuffer textView
-  return (textView, buffer)
+  pure (textView, buffer)
 
 logUpdater :: Gtk.TextBuffer -> Gtk.TextView -> Chan LogMessage -> IO ()
 logUpdater buffer textView chan = do
@@ -280,7 +280,7 @@ addMissingSimpleColumn colView columnTitle getText expandable = do
       #setChild listItem (Just label)
     case res of
       Nothing -> putStrLn "initListItem failed"
-      Just () -> return ()
+      Just () -> pure ()
 
   void $ on factory #bind $ \o1 -> do
     res <- runMaybeT $ do
@@ -295,7 +295,7 @@ addMissingSimpleColumn colView columnTitle getText expandable = do
       Gtk.widgetSetTooltipText label (Just text)
     case res of
       Nothing -> putStrLn "bindListItem failed"
-      Just () -> return ()
+      Just () -> pure ()
 
   column <-
     new
@@ -330,7 +330,7 @@ addFileSimpleColumn colView columnTitle getText expandable = do
       #setChild listItem (Just label)
     case res of
       Nothing -> putStrLn "initListItem failed"
-      Just () -> return ()
+      Just () -> pure ()
 
   void $ on factory #bind $ \o1 -> do
     res <- runMaybeT $ do
@@ -344,7 +344,7 @@ addFileSimpleColumn colView columnTitle getText expandable = do
       set label [#label := text, #tooltipText := text]
     case res of
       Nothing -> putStrLn "bindListItem failed"
-      Just () -> return ()
+      Just () -> pure ()
 
   column <-
     new
@@ -369,7 +369,7 @@ addButtonColumn colView columnTitle getURL = do
       #setChild listItem (Just btn)
     case res of
       Nothing -> putStrLn "initListItem failed"
-      Just () -> return ()
+      Just () -> pure ()
 
   void $ on factory #bind $ \o1 -> do
     res <- runMaybeT $ do
@@ -383,7 +383,7 @@ addButtonColumn colView columnTitle getURL = do
       set btn [#uri := uri, #label := "⬇", #tooltipText := uri]
     case res of
       Nothing -> putStrLn "bindListItem failed"
-      Just () -> return ()
+      Just () -> pure ()
 
   column <-
     new
@@ -408,7 +408,7 @@ addToggleColumn colView = do
       #setChild listItem (Just btn)
     case res of
       Nothing -> putStrLn "initListItem failed"
-      Just () -> return ()
+      Just () -> pure ()
 
   void $ on factory #bind $ \_ -> pure ()
 

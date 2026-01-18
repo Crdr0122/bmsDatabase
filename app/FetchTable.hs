@@ -26,7 +26,7 @@ getTable tableFolder logChan (n, url) = do
 readBMSRecords :: FilePath -> IO (Either String [BMSRecord])
 readBMSRecords f = do
   jsonData <- LB.readFile f
-  return $ eitherDecode jsonData
+  pure $ eitherDecode jsonData
 
 processTables :: Connection -> FilePath -> [FilePath] -> LogChan -> IO ()
 processTables conn tableFolder filePaths logChan = do

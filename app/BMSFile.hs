@@ -110,7 +110,7 @@ processBMSFileIfExist conn logChan f = do
   fileNotExistInDb :: FilePath -> IO Bool
   fileNotExistInDb file = do
     res <- query conn "SELECT 1 FROM bms_files WHERE file_path = ?" (Only file) :: IO [Only Int]
-    return $ null res
+    pure $ null res
 
 renameBMSFolders :: FilePath -> IO ()
 renameBMSFolders dir = do
@@ -146,7 +146,7 @@ parseBMS file = do
       remove txt i = case find (T.isPrefixOf txt) l of
         Just x -> T.stripEnd $ T.drop i x
         Nothing -> ""
-  return
+  pure
     BMSFile
       { fArtist = remove "#ARTIST " 8
       , fTitle = remove "#TITLE " 7
@@ -163,9 +163,9 @@ parseBMSON file = do
   case eitherDecode bytestring of
     Left err -> do
       putStrLn $ "Error parsing BMSON file " ++ file ++ ": " ++ err
-      return BMSFile{fArtist = "", fTitle = "", fMd5 = Nothing, fSha256 = Nothing, filePath = ""}
+      pure BMSFile{fArtist = "", fTitle = "", fMd5 = Nothing, fSha256 = Nothing, filePath = ""}
     Right BMSONFile{info = BMSON{bmsonArtist = a, bmsonTitle = t}} ->
-      return
+      pure
         BMSFile
           { fArtist = a
           , fTitle = t
@@ -177,4 +177,4 @@ parseBMSON file = do
 shiftJISToUTF8 :: B.ByteString -> IO T.Text
 shiftJISToUTF8 bs = do
   converter <- ICU.open "shift_jis" Nothing
-  return $ ICU.toUnicode converter bs
+  pure $ ICU.toUnicode converter bs

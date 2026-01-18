@@ -17,7 +17,7 @@ main = do
       error "Wrong Config"
     Right ConfigFile{configFileTables, actualBMSData} -> do
       let t = map (\DifficultyTable{tableName, tableUrl} -> (unpack tableName, parseRequest_ (unpack tableUrl))) configFileTables
-      return (unpack actualBMSData, t)
+      pure (unpack actualBMSData, t)
 
   xdgDataDir <- getXdgDirectory XdgData "bmsDatabase/"
   let config =

@@ -66,7 +66,7 @@ newMissingBMSWrapper :: (MonadIO m) => MissingBMS -> m Object
 newMissingBMSWrapper record = liftIO $ do
   wrapper <- new MissingBMSWrapper []
   gobjectSetPrivateData wrapper record
-  toObject wrapper >>= return
+  toObject wrapper >>= pure
 
 toMissingBMSWrapper :: (MonadIO m) => [MissingBMS] -> m [Object]
 toMissingBMSWrapper = mapM newMissingBMSWrapper
@@ -96,7 +96,7 @@ instance DerivedGObject BMSFileWrapper where
           , nick = "File Title"
           , blurb = "Title of BMS File"
           , defaultValue = Nothing
-          , setter = (\_ _ -> return ())
+          , setter = (\_ _ -> pure ())
           , getter = gobjectGetPrivateData >=> pure . Just . fTitle
           , flags = Nothing
           }
@@ -107,7 +107,7 @@ instance DerivedGObject BMSFileWrapper where
           , nick = "File Artist"
           , blurb = "Artist of BMS File"
           , defaultValue = Nothing
-          , setter = (\_ _ -> return ())
+          , setter = (\_ _ -> pure ())
           , getter = gobjectGetPrivateData >=> pure . Just . fArtist
           , flags = Nothing
           }
@@ -127,7 +127,7 @@ newBMSFileWrapper :: (MonadIO m) => BMSFile -> m Object
 newBMSFileWrapper file = liftIO $ do
   wrapper <- new BMSFileWrapper []
   gobjectSetPrivateData wrapper file
-  toObject wrapper >>= return
+  toObject wrapper >>= pure
 
 toBMSFileWrapper :: (MonadIO m) => [BMSFile] -> m [Object]
 toBMSFileWrapper = mapM newBMSFileWrapper

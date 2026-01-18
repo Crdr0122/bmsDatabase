@@ -152,4 +152,4 @@ threadUpdateMain :: IO () -> IO ()
 threadUpdateMain action =
   void $ GLib.idleAdd GLib.PRIORITY_DEFAULT_IDLE $ do
     action
-    return GLib.SOURCE_REMOVE
+    pure GLib.SOURCE_REMOVE
