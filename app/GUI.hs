@@ -379,8 +379,9 @@ addButtonColumn colView columnTitle getURL = do
       widget <- MaybeT $ #getChild listItem
       btn <- MaybeT $ castTo Gtk.LinkButton widget
       bmsRecord <- liftIO $ gobjectGetPrivateData missingBMSWrapper
-      uri <- hoistMaybe $ getURL bmsRecord
-      set btn [#uri := uri, #label := "⬇", #tooltipText := uri]
+      case getURL bmsRecord of
+        Just uri | not (T.null (T.strip uri)) -> set btn [#uri := uri, #label := "⬇", #tooltipText := uri, #sensitive := True]
+        _ -> set btn [#uri := "", #label := "", #tooltipText := "", #sensitive := False]
     case res of
       Nothing -> putStrLn "bindListItem failed"
       Just () -> pure ()
