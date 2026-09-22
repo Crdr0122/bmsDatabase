@@ -8,7 +8,7 @@ import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan (Chan, newChan, readChan, writeChan)
 import Control.Monad (forM_, forever, void, (>=>))
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Maybe (MaybeT (..), hoistMaybe)
+import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.GI.Base
 import Data.GI.Base.GObject (gobjectGetPrivateData, registerGType)
 import Data.Maybe (fromMaybe)

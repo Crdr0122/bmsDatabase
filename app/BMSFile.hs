@@ -142,7 +142,7 @@ parseBMS file = do
   bytestring <- B.readFile file
   result <- shiftJISToUTF8 bytestring
   let l = T.lines result
-      digest = MD5.finalize $ MD5.update MD5.init bytestring
+      digestMd5 = MD5.finalize $ MD5.update MD5.init bytestring
       remove txt i = case find (T.isPrefixOf txt) l of
         Just x -> T.stripEnd $ T.drop i x
         Nothing -> ""
@@ -150,7 +150,7 @@ parseBMS file = do
     BMSFile
       { fArtist = remove "#ARTIST " 8
       , fTitle = remove "#TITLE " 7
-      , fMd5 = Just $ decodeUtf8 $ B16.encode digest
+      , fMd5 = Just $ decodeUtf8 $ B16.encode digestMd5
       , fSha256 = Nothing
       , filePath = T.pack file
       }
@@ -167,8 +167,8 @@ parseBMSON file = do
     Right BMSONFile{info = BMSON{bmsonArtist = a, bmsonTitle = t}} ->
       pure
         BMSFile
-          { fArtist = a
-          , fTitle = t
+          { fArtist = T.strip a
+          , fTitle = T.strip t
           , fMd5 = Nothing
           , fSha256 = Just $ decodeUtf8 $ B16.encode digest
           , filePath = T.pack file
